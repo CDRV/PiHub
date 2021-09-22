@@ -5,8 +5,6 @@
 #          Mathieu Hamel, Eng. MASc.
 ##################################################
 
-from Globals import logger, config_man
-
 # import socket
 # import sys
 # import datetime
@@ -120,9 +118,13 @@ from Globals import logger, config_man
 #             cmdReboot = 'sudo reboot'
 #             os.system(cmdReboot)
 
+import time
+
 if __name__ == '__main__':
+
     from libs.logging.Logger import Logger
     from libs.config.ConfigManager import ConfigManager
+    from libs.servers.BedServer import BedServer
 
     # Init globals
     logger = Logger()
@@ -130,11 +132,35 @@ if __name__ == '__main__':
 
     # Load config file
     logger.log_info("Starting up PiHub...")
-    config_man.load_config('config/PiHub.json')
+    if not config_man.load_config('config/PiHub.json'):
+        logger.log_error("Invalid config - system halted.")
+        exit(1)
 
     # Set logger parameters
-    if config_man.server_config["enable_logging"]:
-        logger.set_log_path(config_man.server_config["logs_path"])
+    if config_man.general_config["enable_logging"]:
+        logger.set_log_path(config_man.general_config["logs_path"])
 
-    # Start main server
+    # Initializing...
+    servers = []
+
+    if config_man.general_config["enable_bed_server"]:
+        # Start bed server
+        bed_server = BedServer(server_config=config_man.bed_server_config)
+        bed_server.start()
+        servers.append(bed_server)
+
+    try:
+        # Main loop on main thread. Could be use to check things at regular intervals
+        while True:
+            time.sleep(120)
+    except (KeyboardInterrupt, SystemExit):
+        for server in servers:
+            server.stop()
+        exit(0)
+
+
+
+
+
+
 

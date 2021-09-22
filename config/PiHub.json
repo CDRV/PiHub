@@ -1,21 +1,30 @@
 {
-  "Server": {
-    "hostname": "127.0.0.1",
-    "port": 3000,
+  "General": {
     "enable_sftp": true,
     "enable_opentera": false,
-    "logs_path": "logs",
-    "data_path": "data",
-    "enable_logging": true
+    "enable_logging": true,
+    "enable_bed_server": true,
+    "enable_watch_server": false,
+    "logs_path": "logs"
+  },
+  "WatchServer": {
+    "hostname": "127.0.0.1",
+    "port": 8118,
+    "data_path": "data"
+  },
+  "BedServer": {
+    "hostname": "127.0.0.1",
+    "port": 3000,
+    "data_path": "data"
   },
   "SFTP": {
     "hostname": "127.0.0.1",
     "port": 22,
     "username": "test",
-    "password": "test",
+    "password": "test"
   },
   "OpenTera": {
     "hostname": "localhost",
-    "port": 40075,
+    "port": 40075
   }
 }

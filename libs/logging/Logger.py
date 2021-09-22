@@ -45,9 +45,8 @@ class Logger:
         log_str = '[' + prefix + ']\t' + \
                   datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') + '\t' + log
 
-        if not self.current_log_file:
-            print(log_str)
-        else:
+        print(log_str)
+        if self.current_log_file:
             error_file = open(self.current_log_file, 'a+')
             error_file.write(log_str + '\n')
             error_file.close()
