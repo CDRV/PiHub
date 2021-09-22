@@ -1,0 +1,5 @@
+# @reboot start the 4G connexion
+@reboot sleep 30 && sh /home/pi/Desktop/PiHub/setup/pihub_startup.sh
+# @reboot transfert all last files recorded 
+@reboot sleep 35 && python3 /home/pi/Desktop/PiHub/lastTransfert.py
+
