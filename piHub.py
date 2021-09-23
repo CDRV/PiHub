@@ -119,26 +119,32 @@
 #             os.system(cmdReboot)
 
 import time
+import logging
 
 if __name__ == '__main__':
 
-    from libs.logging.Logger import Logger
     from libs.config.ConfigManager import ConfigManager
     from libs.servers.BedServer import BedServer
 
+    # Logging module
+    ################
+    from libs.logging.Logger import init_global_logger
+    init_global_logger()
+
     # Init globals
-    logger = Logger()
+    ##############
     config_man = ConfigManager()
 
     # Load config file
-    logger.log_info("Starting up PiHub...")
+    logging.info("Starting up PiHub...")
     if not config_man.load_config('config/PiHub.json'):
-        logger.log_error("Invalid config - system halted.")
+        logging.critical("Invalid config - system halted.")
         exit(1)
 
     # Set logger parameters
     if config_man.general_config["enable_logging"]:
-        logger.set_log_path(config_man.general_config["logs_path"])
+        from libs.logging.Logger import init_file_logger
+        init_file_logger(config_man.general_config["logs_path"])
 
     # Initializing...
     servers = []
@@ -149,6 +155,7 @@ if __name__ == '__main__':
         bed_server.start()
         servers.append(bed_server)
 
+    logging.info("PiHub started.")
     try:
         # Main loop on main thread. Could be use to check things at regular intervals
         while True:
@@ -156,7 +163,9 @@ if __name__ == '__main__':
     except (KeyboardInterrupt, SystemExit):
         for server in servers:
             server.stop()
+        logging.info("PiHub stopped by user.")
         exit(0)
+    logging.info("PiHub stopped.")
 
 
 

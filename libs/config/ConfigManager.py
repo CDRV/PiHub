@@ -5,6 +5,7 @@
 ##################################################
 
 import json
+import logging
 
 
 class ConfigManager:
@@ -17,17 +18,15 @@ class ConfigManager:
         self.watch_server_config = {}
 
     def load_config(self, filename) -> bool:
-        from Globals import logger
-
         try:
             config_file = open(filename, mode='rt', encoding='utf8')
             config_json = json.load(config_file)
             config_file.close()
         except IOError as e:
-            logger.log_error("Error loading file: " + filename + " - " + str(e))
+            logging.error("Error loading file: " + filename + " - " + str(e))
             return False
         except json.JSONDecodeError as e:
-            logger.log_error("Error decoding file: " + filename + " - " + str(e))
+            logging.error("Error decoding file: " + filename + " - " + str(e))
             return False
 
         if self.validate_config("General", config_json['General'], ['enable_bed_server', 'enable_watch_server',
@@ -51,12 +50,11 @@ class ConfigManager:
 
     @staticmethod
     def validate_config(section: str, config: dict, required_fields: list):
-        from Globals import logger
         rval = True
 
         for field in required_fields:
             if field not in config:
-                logger.log_error(section + ' Config - missing "' + field + '"')
+                logging.error(section + ' Config - missing "' + field + '"')
                 rval = False
 
         return rval
