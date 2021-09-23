@@ -1,7 +1,5 @@
 {
   "General": {
-    "enable_sftp": true,
-    "enable_opentera": false,
     "enable_logging": true,
     "enable_bed_server": true,
     "enable_watch_server": false,

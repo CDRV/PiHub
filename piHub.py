@@ -151,7 +151,8 @@ if __name__ == '__main__':
 
     if config_man.general_config["enable_bed_server"]:
         # Start bed server
-        bed_server = BedServer(server_config=config_man.bed_server_config)
+        bed_server = BedServer(server_config=config_man.bed_server_config,
+                               sftp_config=config_man.sftp_config)
         bed_server.start()
         servers.append(bed_server)
 

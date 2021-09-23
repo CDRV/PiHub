@@ -30,7 +30,6 @@ class ConfigManager:
             return False
 
         if self.validate_config("General", config_json['General'], ['enable_bed_server', 'enable_watch_server',
-                                                                    'enable_sftp', 'enable_opentera',
                                                                     'enable_logging']):
             self.general_config = config_json["General"]
 

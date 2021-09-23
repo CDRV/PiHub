@@ -9,7 +9,7 @@ log_format = '[%(levelname)s]\t%(asctime)s\t%(threadName)s\t%(message)s'
 
 
 def init_global_logger():
-    logging.basicConfig(level=logging.DEBUG, format=log_format)
+    logging.basicConfig(level=logging.INFO, format=log_format)
     # formatter = logging.Formatter('[%(levelname)s]\t%(asctime)s\t%(threadName)s\t%(message)s')
 
 
