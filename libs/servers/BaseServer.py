@@ -5,6 +5,8 @@
 ##################################################
 
 import threading
+from os import makedirs
+import logging
 
 
 class BaseServer(threading.Thread):
@@ -16,6 +18,13 @@ class BaseServer(threading.Thread):
         self.is_running = False
         super().__init__()
         self.setName(self.__class__.__name__ + 'Thread')
+
+        # Create base data path is missing
+        try:
+            makedirs(name=self.data_path, exist_ok=True)
+        except OSError as exc:
+            logging.error('Error creating ' + self.data_path + ': ' + exc.strerror)
+            raise
 
     def stop(self):
         self.is_running = False

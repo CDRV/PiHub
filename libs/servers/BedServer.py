@@ -57,7 +57,7 @@ class BedServer(BaseServer):
 
         self.server.timeout = 10.0
         self.is_running = True
-        logging.info("BedServer started.")
+        logging.info("BedServer started on port " + str(self.port))
         try:
             self.server.serve_forever()
 
@@ -69,6 +69,7 @@ class BedServer(BaseServer):
 
         if self.server:
             self.server.shutdown()
+            self.server.server_close()
 
 
 class BedServerRequestHandler(socketserver.StreamRequestHandler):

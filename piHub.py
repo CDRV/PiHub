@@ -9,6 +9,7 @@ import logging
 
 from libs.config.ConfigManager import ConfigManager
 from libs.servers.BedServer import BedServer
+from libs.servers.WatchServer import WatchServer
 from libs.hardware.PiHubHardware import PiHubHardware
 
 if __name__ == '__main__':
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     # Initializing...
     servers = []
 
+    # Bed Server
     if config_man.general_config["enable_bed_server"]:
         # Start bed server
         bed_server = BedServer(server_config=config_man.bed_server_config,
@@ -43,6 +45,16 @@ if __name__ == '__main__':
         # Start server
         bed_server.start()
         servers.append(bed_server)
+
+    # Apple Watch server
+    if config_man.general_config["enable_watch_server"]:
+        # Start Apple Watch server
+        watch_server = WatchServer(server_config=config_man.watch_server_config,
+                                   sftp_config=config_man.sftp_config)
+
+        # Start server
+        watch_server.start()
+        servers.append(watch_server)
 
     logging.info("PiHub started.")
     try:
