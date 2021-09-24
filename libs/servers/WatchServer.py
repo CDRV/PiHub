@@ -22,9 +22,6 @@ class WatchServer(BaseServer):
 
     def run(self):
         logging.info('Apple Watch Server starting...')
-        self.is_running = True
-        logging.info('Apple Watch Server started on port ' + str(self.port))
-
         request_handler = AppleWatchRequestHandler
         request_handler.sftp_config = self.sftp_config
         request_handler.data_path = self.data_path
@@ -32,6 +29,9 @@ class WatchServer(BaseServer):
 
         self.server = ThreadingHTTPServer((self.hostname, self.port), request_handler)
         self.server.timeout = 5         # 5 seconds timeout should be ok since we are usually on local network
+        self.is_running = True
+        logging.info('Apple Watch Server started on port ' + str(self.port))
+
         self.server.serve_forever()
         self.server.server_close()
 
@@ -55,7 +55,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
         BaseHTTPRequestHandler.setup(self)
 
     # Simple get to show what to do for file transfer
-    def do_get(self):
+    def do_GET(self):
 
         # Ping requests can be answered directly
         content_type = self.headers['Content-Type']
@@ -79,7 +79,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
 
-    def do_post(self):
+    def do_POST(self):
 
         # Unpack metadata
         content_type = self.headers['Content-Type']
@@ -152,10 +152,10 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
                                   str(err_desc))
                     return
 
-                # if text_format:
-                #     fh.write(data.decode())  # SB Really required?
-                # else:
-                fh.write(data)
+                if text_format:
+                    fh.write(data.decode())
+                else:
+                    fh.write(data)
                 content_size_remaining -= buffer_size
                 content_received = (content_length - content_size_remaining)
                 # pc = math.floor((content_received / content_length) * 100)
