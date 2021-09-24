@@ -7,12 +7,17 @@
 import paramiko
 import pysftp
 import logging
+from libs.hardware.PiHubHardware import PiHubHardware
 
 
 class SFTPUploader:
 
     @staticmethod
     def sftp_send(sftp_config: dict, file_server_location: str, file_to_transfer: str):
+        # Check if Internet connected
+        PiHubHardware.ensure_internet_is_available()
+
+        # Do the transfer
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None
         logging.info('Sending ' + file_to_transfer + ' to server at ' + sftp_config["hostname"] + ':' +

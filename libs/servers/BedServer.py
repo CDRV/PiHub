@@ -21,16 +21,20 @@ class BedServer(BaseServer):
     def __init__(self, server_config: dict, sftp_config: dict):
         super().__init__(server_config=server_config)
         self.sftp_config = sftp_config
+        self.server_base_folder = server_config['server_base_folder']
 
     def run(self):
         logging.info('BedServer starting...')
         try:
-            self.server = socketserver.ThreadingTCPServer(server_address=(self.hostname, self.port),
-                                                          RequestHandlerClass=BedServerRequestHandler)
-
             # Add custom values that are need in the request handler
-            self.server.sftp_config = self.sftp_config
-            self.server.data_path = self.data_path
+            request_handler = BedServerRequestHandler
+            request_handler.sftp_config = self.sftp_config
+            request_handler.data_path = self.data_path
+            request_handler.server_base_folder = self.server_base_folder
+
+            self.server = socketserver.ThreadingTCPServer(server_address=(self.hostname, self.port),
+                                                          RequestHandlerClass=request_handler)
+
         except OSError as e:
             logging.critical(e.strerror)
             return
@@ -56,6 +60,10 @@ class BedServer(BaseServer):
 
 class BedServerRequestHandler(socketserver.StreamRequestHandler):
 
+    data_path: str = None
+    sftp_config: dict = None
+    server_base_folder: str = None
+
     def handle(self) -> None:
         # Greet device
         logging.info('Got connection from: ' + self.client_address[0])
@@ -67,7 +75,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         # Establish the correct filename (will be updated each time the sensor is connected
         # Will append the file or create a new one if non-existing
         # filename = Path("/home/pi/Desktop/Data/"+str(datetime.datetime.now().date())+".txt")
-        filepath = self.server.data_path + '/' + str(greetings)
+        filepath = self.data_path + '/' + str(greetings)
         try:
             makedirs(name=filepath, exist_ok=True)
         except OSError as exc:
@@ -85,6 +93,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
             raise
 
         # Loop to transfer data (4 bytes at a time - UINT32 are read from RAM and transmitted by ESP
+        logging.info('Starting data transfer...')
         while self.connection:
             try:
                 d1minidata = self.request.recv(4)  # self.rfile.read(4)
@@ -97,13 +106,15 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
                 self.rfile.close()
                 logging.error("Timeout receiving data.")
                 break
-        logging.info("Data received! \n")
+        logging.info("Data transfer complete.")
         file.write("\n")
         file.close()
 
         # Send file using SFTP
-        file_server_location = "/Test/" + str(greetings)
+        file_server_location = "/" + self.server_base_folder + "/" + str(greetings)
         # Start SFTP transfer in a new thread, so this one doesn't wait on the transfer
-        sftp = threading.Thread(target=SFTPUploader.sftp_send, args=(self.server.sftp_config, file_server_location,
-                                                                     filename))
-        sftp.start()
+        # sftp = threading.Thread(target=SFTPUploader.sftp_send, args=(self.sftp_config, file_server_location,
+        #                                                              filename))
+        # sftp.start()
+
+        SFTPUploader.sftp_send(self.sftp_config, file_server_location, filename)

@@ -9,7 +9,6 @@ import logging
 
 from libs.config.ConfigManager import ConfigManager
 from libs.servers.BedServer import BedServer
-from libs.utils.Network import Network
 from libs.hardware.PiHubHardware import PiHubHardware
 
 if __name__ == '__main__':
@@ -49,17 +48,7 @@ if __name__ == '__main__':
         while True:
             # Watchdog
             # Check if we have Internet access or not
-            logging.debug('Watchdog - checking Internet connection')
-            if not Network.is_internet_connected():
-                logging.warning('Internet is down... Trying to reboot cellular card.')
-                # No internet connection... Try to reboot the cellular network
-                PiHubHardware.reset_cellular_network()
-                time.sleep(5)  # Wait 5 seconds to see if network is coming back online or not
-                if not Network.is_internet_connected():
-                    logging.warning('Reboot completed, but still no Internet... Rebooting...')
-                    # Still no internet connection - reboot the pi!
-                    PiHubHardware.reboot()
-                logging.info('Internet is back. All is fine.')
+            PiHubHardware.ensure_internet_is_available()
             # Wait to check again in a few seconds
             time.sleep(120)
             

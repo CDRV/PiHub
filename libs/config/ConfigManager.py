@@ -42,7 +42,8 @@ class ConfigManager:
         if self.validate_config("WatchServer", config_json['WatchServer'], ['hostname', 'port', 'data_path']):
             self.watch_server_config = config_json["WatchServer"]
 
-        if self.validate_config("BedServer", config_json['BedServer'], ['hostname', 'port', 'data_path']):
+        if self.validate_config("BedServer", config_json['BedServer'], ['hostname', 'port', 'data_path',
+                                                                        'server_base_folder']):
             self.bed_server_config = config_json["BedServer"]
 
         return True

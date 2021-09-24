@@ -13,7 +13,8 @@
   "BedServer": {
     "hostname": "127.0.0.1",
     "port": 3000,
-    "data_path": "data"
+    "data_path": "data",
+    "server_base_folder": "Test"
   },
   "SFTP": {
     "hostname": "127.0.0.1",
