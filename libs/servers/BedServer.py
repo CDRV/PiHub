@@ -11,7 +11,7 @@ import logging
 import socketserver
 from os import makedirs
 from datetime import datetime
-import threading
+from pathlib import Path
 
 
 class BedServer(BaseServer):
@@ -23,8 +23,21 @@ class BedServer(BaseServer):
         self.sftp_config = sftp_config
         self.server_base_folder = server_config['server_base_folder']
 
+    def sync_files(self):
+        logging.info("BedServer: Synchronizing files with server...")
+        full_path = Path(self.data_path)
+
+        # Sync local files with the ones on the server
+        SFTPUploader.sftp_sync(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
+                               remote_base_path=self.server_base_folder)
+        logging.info("BedServer: Synchronization done.")
+
     def run(self):
         logging.info('BedServer starting...')
+
+        # Check if all files are on sync on the server
+        self.sync_files()
+
         try:
             # Add custom values that are need in the request handler
             request_handler = BedServerRequestHandler

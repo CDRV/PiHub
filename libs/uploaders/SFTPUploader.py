@@ -9,11 +9,13 @@ import pysftp
 import logging
 from libs.hardware.PiHubHardware import PiHubHardware
 
+from sftpclone import sftpclone
+
 
 class SFTPUploader:
 
     @staticmethod
-    def sftp_send(sftp_config: dict, file_server_location: str, file_to_transfer: str):
+    def sftp_send(sftp_config: dict, file_server_location: str, file_to_transfer: str) -> bool:
         # Check if Internet connected
         PiHubHardware.ensure_internet_is_available()
 
@@ -36,4 +38,17 @@ class SFTPUploader:
                 pysftp.AuthenticationException, pysftp.HostKeysException,
                 paramiko.SSHException, paramiko.PasswordRequiredException) as exc:
             logging.error('Error occured transferring ' + file_to_transfer + ': ' + str(exc))
+            return False
+
+        return True
+
+    @staticmethod
+    def sftp_sync(sftp_config: dict, remote_base_path: str, local_base_path: str):
+        remote_url = sftp_config['username'] + ":" + sftp_config['password'] + '@' + sftp_config["hostname"] + ":" + \
+                     remote_base_path
+
+        cloner = sftpclone.SFTPClone(local_path=local_base_path, remote_url=remote_url, port=sftp_config["port"],
+                                     delete=False, allow_unknown=True)
+
+        cloner.run()
 
