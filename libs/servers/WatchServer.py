@@ -4,11 +4,14 @@
 # Authors: Simon Brière, Eng. MASc.
 ##################################################
 from libs.servers.BaseServer import BaseServer
+from libs.uploaders.SFTPUploader import SFTPUploader
+
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import logging
 import os
+import threading
 
 
 class WatchServer(BaseServer):
@@ -19,13 +22,18 @@ class WatchServer(BaseServer):
         super().__init__(server_config=server_config)
         self.sftp_config = sftp_config
         self.server_base_folder = server_config['server_base_folder']
+        self.sftp_transfer = server_config['sftp_transfer']
+        self.opentera_transfer = server_config['opentera_transfer']
+        self.send_logs_only = server_config['send_logs_only']
 
     def run(self):
         logging.info('Apple Watch Server starting...')
+
+        # Check if all files are on sync on the server
+        self.sync_files()
+
         request_handler = AppleWatchRequestHandler
-        request_handler.sftp_config = self.sftp_config
-        request_handler.data_path = self.data_path
-        request_handler.server_base_folder = self.server_base_folder
+        request_handler.base_server = self
 
         self.server = ThreadingHTTPServer((self.hostname, self.port), request_handler)
         self.server.timeout = 5         # 5 seconds timeout should be ok since we are usually on local network
@@ -44,12 +52,76 @@ class WatchServer(BaseServer):
             self.server.shutdown()
             self.server.server_close()
 
+    def sync_files(self):
+        logging.info("WatchServer: Synchronizing files with server...")
+        # Build list of files to transfer
+        base_folder = self.data_path + '/ToProcess/'
+        files = []
+        full_files = []
+        file_folders = []
+        for (dp, dn, f) in os.walk(base_folder):
+            if f:
+                if self.send_logs_only:
+                    # Filter list of files to keep only log files
+                    folder_files = [file for file in f if file.lower().endswith("txt") or file.lower().endswith("oimi")]
+                else:
+                    folder_files = f
+                files.extend(folder_files)
+                full_files.extend([os.path.join(dp.replace('/', os.sep), file) for file in folder_files])
+                file_folder = dp.replace(base_folder, '')
+                file_folders.extend("/" + self.server_base_folder + "/" + file_folder.replace(os.sep, '/')
+                                    for _ in folder_files)
+
+        # Filter duplicates
+        # full_files = list(set(full_files))
+
+        if files:
+            logging.info('About to sync files...')
+
+            if self.sftp_transfer:
+                # Send files using sftp
+                # Sending files
+                SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
+                                       files_path_on_server=file_folders)
+
+            # Set files as processed
+            # TODO: Provide a callback function that is called when the file is really transferred since, currently,
+            #  SFTP transfers occurs in their own threads
+            for file in full_files:
+                WatchServer.file_was_processed(file)
+        else:
+            logging.info('No file to sync!')
+        # Clean up empty folders
+        WatchServer.remove_empty_folders(Path(base_folder).absolute())
+        logging.info("WatchServer: Synchronization done.")
+
+    @staticmethod
+    def file_was_processed(full_filepath: str):
+        # Move file to the "Processed" folder
+        target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + 'Processed' + os.sep)
+
+        # Create directory, if needed
+        target_dir = os.path.dirname(target_file)
+        try:
+            os.makedirs(name=target_dir, exist_ok=True)
+        except OSError as exc:
+            logging.error('Error creating ' + target_dir + ': ' + exc.strerror)
+            raise
+
+        os.replace(full_filepath, target_file)
+        # logging.info("Processed file: " + full_filepath)
+
+    @staticmethod
+    def remove_empty_folders(path_abs):
+        walk = list(os.walk(path_abs))
+        for path, _, _ in walk[::-1]:
+            if len(os.listdir(path)) == 0:
+                os.rmdir(path.replace("/", os.sep))
+
 
 class AppleWatchRequestHandler(BaseHTTPRequestHandler):
 
-    data_path: str = None
-    sftp_config: dict = None
-    server_base_folder: str = None
+    base_server: WatchServer = None
 
     def setup(self):
         BaseHTTPRequestHandler.setup(self)
@@ -73,6 +145,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Content-type', 'cdrv-cmd/Disconnect')
             self.end_headers()
+            self.base_server.sync_files()
             return
 
         self.send_response(200)
@@ -102,8 +175,8 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        destination_dir = (self.data_path + '/' + device_name + '/' + file_path + '/').replace('//', '/') \
-            .replace('/', os.sep)
+        destination_dir = (self.base_server.data_path + '/ToProcess/' + device_name + '/' + file_path + '/')\
+            .replace('//', '/').replace('/', os.sep)
         destination_path = destination_dir + file_name
 
         file_name = device_name + file_path + '/' + file_name
@@ -182,10 +255,24 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             error = "Transfer error: " + str(file_infos.st_size) + " bytes received, " + str(content_length) + \
                     " expected."
             logging.error(device_name + " - " + file_name + " - " + error)
-        else:
-            # All is good!
-            logging.info(device_name + " - " + file_name + ": transfer complete.")
+            return
+
+        # All is good!
+        logging.info(device_name + " - " + file_name + ": transfer complete.")
+
+        # # Need to transfer using SFTP?
+        # if self.base_server.sftp_transfer:
+        #
+        #     # Check if we need to transfer only log files and if it's a log file
+        #     if not self.base_server.send_logs_only or \
+        #             (self.base_server.send_logs_only and file_type.lower() in ['txt', 'oimi']):
+        #         file_name = Path(file_name).absolute()  # Get full path
+        #         file_server_location = "/" + self.base_server.server_base_folder + "/" + device_name + "/" + file_path
+        #         sftp = threading.Thread(target=SFTPUploader.sftp_send, args=(self.base_server.sftp_config,
+        #                                                                      file_server_location, file_name))
+        #         sftp.start()
 
         self.send_response(200)
         self.send_header('Content-type', 'file-transfer/ack')
         self.end_headers()
+

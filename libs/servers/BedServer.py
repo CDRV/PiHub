@@ -131,4 +131,5 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         #                                                              filename))
         # sftp.start()
 
-        SFTPUploader.sftp_send(self.sftp_config, file_server_location, filename)
+        SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_path_on_server=[file_server_location],
+                               files_to_transfer=[filename])

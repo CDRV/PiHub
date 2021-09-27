@@ -11,7 +11,8 @@
     "data_path": "data/watch",
     "sftp_transfer": true,
     "opentera_transfer": false,
-    "server_base_folder": "Watch"
+    "server_base_folder": "Watch",
+    "send_logs_only": false
   },
   "BedServer": {
     "hostname": "0.0.0.0",
@@ -20,10 +21,10 @@
     "server_base_folder": "Bed"
   },
   "SFTP": {
-    "hostname": "localhost",
-    "port": 22,
-    "username": "test",
-    "password": "test"
+    "hostname": "telesante.cdrv.ca",
+    "port": 40091,
+    "username": "dev",
+    "password": "tr3cr100"
   },
   "OpenTera": {
     "hostname": "localhost",

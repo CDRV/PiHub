@@ -39,7 +39,9 @@ class ConfigManager:
         if self.validate_config("OpenTera", config_json['OpenTera'], ['hostname', 'port']):
             self.opentera_config = config_json["OpenTera"]
 
-        if self.validate_config("WatchServer", config_json['WatchServer'], ['hostname', 'port', 'data_path']):
+        if self.validate_config("WatchServer", config_json['WatchServer'], ['hostname', 'port', 'data_path',
+                                                                            'sftp_transfer', 'opentera_transfer',
+                                                                            'server_base_folder', 'send_logs_only']):
             self.watch_server_config = config_json["WatchServer"]
 
         if self.validate_config("BedServer", config_json['BedServer'], ['hostname', 'port', 'data_path',
