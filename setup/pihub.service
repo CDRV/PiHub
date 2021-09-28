@@ -4,7 +4,7 @@ Description=PiHub
 After=network-online.target
 
 [Service]
-ExecStart=/home/pi/Desktop/PiHub/venv/Scripts/python /home/pi/Desktop/PiHub/piHub.py
+ExecStart=/home/pi/Desktop/PiHub/venv/bin/python3 /home/pi/Desktop/PiHub/piHub.py
 WorkingDirectory=/home/pi/Desktop/PiHub
 StandardOutput=syslog+console
 StandardError=syslog+console
