@@ -87,8 +87,6 @@ class WatchServer(BaseServer):
                                        file_transferred_callback=self.file_was_processed)
 
             # Set files as processed
-            # TODO: Provide a callback function that is called when the file is really transferred since, currently,
-            #  SFTP transfers occurs in their own threads
             self.move_processed_files()
             # for file in full_files:
             #     WatchServer.file_was_processed(file)
