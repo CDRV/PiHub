@@ -18,12 +18,23 @@ Main features of the project includes:
 Python 3.8
 
 ## Pi setup
-  1. Pull the repository directly into `/home/pi/Desktop` folder (a PiHub folder will be created)
-  2. Edit the config file `/home/pi/Desktop/PiHub/config/PiHub.json`
-  3. Setup the cron tasks using `sudo crontab -e` and the crontab job listed in the `/home/pi/Desktop/PiHub/setup/crontab.txt` file
-  4. Setup and enable the main pihub service using<br>
+
+This suppose that a working git environment is setup, and that a Personal Access Token (PAT) was generated to use as password.
+Initialize credential manager (to remember PAT) `git config --global credential.helper store`
+
+  1. Clone the repository directly into `/home/pi/Desktop` folder (a PiHub folder will be created): `git clone https://github.com/CDRV/PiHub.git`
+  2. Create Python virtual environment:
+     1. `cd /home/pi/Desktop/PiHub`
+     2. `python3 -m venv venv`
+     3. `source venv/bin/activate`
+     4. `pip install -r requirements.txt`
+     5. `deactivate`
+  4. Edit the config file `/home/pi/Desktop/PiHub/config/PiHub.json` with the appropriate values
+  5. Setup the cron tasks using `sudo crontab -e` and the crontab job listed in the `/home/pi/Desktop/PiHub/setup/crontab.txt` file
+  6. Setup and enable the main pihub service using<br>
      `sudo cp /home/pi/Desktop/PiHub/setup/pihub.service /etc/systemd/system/pihub.service`<br>
      `sudo systemctl enable pihub.service`
+     `sudo systemctl start pihub.service`
      
 ### Service usage
 To check if the service is running: `systemctl status pihub.service`
