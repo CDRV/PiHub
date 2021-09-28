@@ -15,7 +15,7 @@ Main features of the project includes:
       * OpenTera (https://github.com/introlab/opentera) server
 
 ## Requirements
-Python 3.8
+Tested on Python 3.7 and 3.8
 
 ## Pi setup
 
