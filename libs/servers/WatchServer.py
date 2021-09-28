@@ -17,6 +17,7 @@ import threading
 class WatchServer(BaseServer):
 
     server = None
+    processed_files = []
 
     def __init__(self, server_config: dict, sftp_config: dict):
         super().__init__(server_config=server_config)
@@ -82,34 +83,46 @@ class WatchServer(BaseServer):
                 # Send files using sftp
                 # Sending files
                 SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
-                                       files_path_on_server=file_folders)
+                                       files_path_on_server=file_folders,
+                                       file_transferred_callback=self.file_was_processed)
 
             # Set files as processed
             # TODO: Provide a callback function that is called when the file is really transferred since, currently,
             #  SFTP transfers occurs in their own threads
-            for file in full_files:
-                WatchServer.file_was_processed(file)
+            self.move_processed_files()
+            # for file in full_files:
+            #     WatchServer.file_was_processed(file)
         else:
             logging.info('No file to sync!')
         # Clean up empty folders
         WatchServer.remove_empty_folders(Path(base_folder).absolute())
         logging.info("WatchServer: Synchronization done.")
 
-    @staticmethod
-    def file_was_processed(full_filepath: str):
-        # Move file to the "Processed" folder
-        target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + 'Processed' + os.sep)
+    def file_was_processed(self, full_filepath: str):
+        # Mark file as processed - will be moved later on to prevent conflicts
+        self.processed_files.append(full_filepath)
 
-        # Create directory, if needed
-        target_dir = os.path.dirname(target_file)
-        try:
-            os.makedirs(name=target_dir, exist_ok=True)
-        except OSError as exc:
-            logging.error('Error creating ' + target_dir + ': ' + exc.strerror)
-            raise
+    def move_processed_files(self):
+        for full_filepath in self.processed_files:
+            # Move file to the "Processed" folder
+            target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + 'Processed' + os.sep)
 
-        os.replace(full_filepath, target_file)
-        # logging.info("Processed file: " + full_filepath)
+            # Create directory, if needed
+            target_dir = os.path.dirname(target_file)
+            try:
+                os.makedirs(name=target_dir, exist_ok=True)
+            except OSError as exc:
+                logging.error('Error creating ' + target_dir + ': ' + exc.strerror)
+                raise
+
+            try:
+                os.replace(full_filepath, target_file)
+            except (OSError, IOError) as exc:
+                logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
+                raise
+            # logging.info("Processed file: " + full_filepath)
+
+        self.processed_files.clear()
 
     @staticmethod
     def remove_empty_folders(path_abs):

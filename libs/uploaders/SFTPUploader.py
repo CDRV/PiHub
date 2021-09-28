@@ -15,7 +15,8 @@ from sftpclone import sftpclone
 class SFTPUploader:
 
     @staticmethod
-    def sftp_send(sftp_config: dict, files_path_on_server: [str], files_to_transfer: [str]) -> bool:
+    def sftp_send(sftp_config: dict, files_path_on_server: [str], files_to_transfer: [str],
+                  file_transferred_callback: callable = None) -> bool:
         # Check if Internet connected
         PiHubHardware.ensure_internet_is_available()
 
@@ -31,7 +32,10 @@ class SFTPUploader:
                     if not(s.isdir(file_server_location)):
                         s.mkdir(file_server_location)
                     with s.cd(file_server_location):
-                        s.put(localpath=file_to_transfer, preserve_mtime=True)
+                        s.put(localpath=file_to_transfer, preserve_mtime=True,
+                              callback=lambda current, total:
+                              SFTPUploader.file_upload_progress(current, total, file_to_transfer,
+                                                                file_transferred_callback))
                         logging.info('Sending ' + file_to_transfer + ' to ' + file_server_location + ' ...')
                 # s.close()
             # logging.info('File ' + file_to_transfer + ' sent.')
@@ -43,6 +47,14 @@ class SFTPUploader:
 
         logging.info('Files transfer complete!')
         return True
+
+    @staticmethod
+    def file_upload_progress(current_bytes: int, total_bytes: int, filename: str = 'Unknown',
+                             file_transferred_callback: callable = None):
+        pc_transferred = (current_bytes / total_bytes)*100
+        # print(filename + ": " + f'{pc_transferred:.2f}' + "%")
+        if pc_transferred >= 100 and file_transferred_callback:
+            file_transferred_callback(filename)
 
     @staticmethod
     def sftp_sync(sftp_config: dict, remote_base_path: str, local_base_path: str):

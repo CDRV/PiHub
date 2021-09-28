@@ -12,6 +12,8 @@ from libs.servers.BedServer import BedServer
 from libs.servers.WatchServer import WatchServer
 from libs.hardware.PiHubHardware import PiHubHardware
 
+from Globals import version_string
+
 if __name__ == '__main__':
     # Logging module
     ################
@@ -23,7 +25,7 @@ if __name__ == '__main__':
     config_man = ConfigManager()
 
     # Load config file
-    logging.info("Starting up PiHub...")
+    logging.info("Starting up PiHub v" + version_string + "...")
     if not config_man.load_config('config/PiHub.json'):
         logging.critical("Invalid config - system halted.")
         exit(1)
