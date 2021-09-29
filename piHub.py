@@ -63,8 +63,8 @@ if __name__ == '__main__':
         # Main loop on main thread
         while True:
             # Watchdog
-            # Wait to check again in a few seconds
-            time.sleep(120)
+            # Wait to check again in a few minutes
+            time.sleep(600)
             # Check if we have Internet access or not
             PiHubHardware.ensure_internet_is_available()
             
