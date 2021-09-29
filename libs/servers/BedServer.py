@@ -28,8 +28,11 @@ class BedServer(BaseServer):
         full_path = Path(self.data_path)
 
         # Sync local files with the ones on the server
-        SFTPUploader.sftp_sync(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
-                               remote_base_path=self.server_base_folder)
+        try:
+            SFTPUploader.sftp_sync(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
+                                   remote_base_path=self.server_base_folder)
+        except:
+            logging.error("Bedserver: Unable to synchronize files...")
         logging.info("BedServer: Synchronization done.")
 
     def run(self):
