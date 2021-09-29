@@ -31,7 +31,7 @@ class WatchServer(BaseServer):
         logging.info('Apple Watch Server starting...')
 
         # Check if all files are on sync on the server
-        self.sync_files()
+        self.sync_files(check_internet=False)  # Don't explicitely check internet connection on startup
 
         request_handler = AppleWatchRequestHandler
         request_handler.base_server = self
@@ -53,7 +53,7 @@ class WatchServer(BaseServer):
             self.server.shutdown()
             self.server.server_close()
 
-    def sync_files(self):
+    def sync_files(self, check_internet: bool = True):
         logging.info("WatchServer: Synchronizing files with server...")
         # Build list of files to transfer
         base_folder = self.data_path + '/ToProcess/'
@@ -84,7 +84,8 @@ class WatchServer(BaseServer):
                 # Sending files
                 SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
                                        files_path_on_server=file_folders,
-                                       file_transferred_callback=self.file_was_processed)
+                                       file_transferred_callback=self.file_was_processed,
+                                       check_internet=check_internet)
 
             # Set files as processed
             self.move_processed_files()

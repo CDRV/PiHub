@@ -16,9 +16,10 @@ class SFTPUploader:
 
     @staticmethod
     def sftp_send(sftp_config: dict, files_path_on_server: [str], files_to_transfer: [str],
-                  file_transferred_callback: callable = None) -> bool:
+                  file_transferred_callback: callable = None, check_internet: bool = True) -> bool:
         # Check if Internet connected
-        PiHubHardware.ensure_internet_is_available()
+        if check_internet:
+            PiHubHardware.ensure_internet_is_available()
 
         # Do the transfer
         cnopts = pysftp.CnOpts()

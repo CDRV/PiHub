@@ -63,10 +63,10 @@ if __name__ == '__main__':
         # Main loop on main thread
         while True:
             # Watchdog
-            # Check if we have Internet access or not
-            PiHubHardware.ensure_internet_is_available()
             # Wait to check again in a few seconds
             time.sleep(120)
+            # Check if we have Internet access or not
+            PiHubHardware.ensure_internet_is_available()
             
     except (KeyboardInterrupt, SystemExit):
         for server in servers:
