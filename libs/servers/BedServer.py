@@ -113,7 +113,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         logging.info('Starting data transfer...')
         while self.connection:
             try:
-                d1minidata = self.request.recv(4)  # self.rfile.read(4)
+                d1minidata = self.request.recv(2)  # self.rfile.read(4)
                 if len(d1minidata) == 0:
                     break
                 else:
