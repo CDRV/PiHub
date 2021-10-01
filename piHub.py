@@ -66,7 +66,7 @@ if __name__ == '__main__':
             # Wait to check again in a few minutes
             time.sleep(600)
             # Check if we have Internet access or not
-            PiHubHardware.ensure_internet_is_available()
+            # PiHubHardware.ensure_internet_is_available()
             
     except (KeyboardInterrupt, SystemExit):
         for server in servers:
