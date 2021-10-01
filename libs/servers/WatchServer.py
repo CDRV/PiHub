@@ -83,7 +83,7 @@ class WatchServer(BaseServer):
                 # Send files using sftp
                 # Sending files
                 SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
-                                       files_path_on_server=file_folders,
+                                       files_directory_on_server=file_folders,
                                        file_transferred_callback=self.file_was_processed,
                                        check_internet=check_internet)
 
