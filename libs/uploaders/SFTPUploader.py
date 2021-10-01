@@ -128,6 +128,4 @@ class SFTPUploader:
             temp_file = folders[i] + "/tempData.txt"
             SFTPUploader.sftp_merge(sftp_config, file_path_on_server=file_server_path,
                                     temporary_file=temp_file, file_to_transfer=filename_2_transfer)
-            SFTPUploader.sftp_send(sftp_config, files_directory_on_server=[file_server_directory],
-                                   files_to_transfer=[filename_2_transfer])
             logging.info('file at boot' + str(filename_2_transfer) + ' synced')

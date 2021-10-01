@@ -30,6 +30,8 @@ class BedServer(BaseServer):
         try:
             SFTPUploader.sftp_sync_last(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
                                         remote_base_path=self.server_base_folder)
+            SFTPUploader.sftp_sync(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
+                                   remote_base_path=self.server_base_folder)
         except Exception as e:
             logging.error("Bedserver: Unable to synchronize files - " + str(e))
         logging.info("BedServer: Synchronization done.")
