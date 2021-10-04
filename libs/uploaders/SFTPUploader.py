@@ -118,7 +118,8 @@ class SFTPUploader:
                    if os.path.isdir(os.path.join(local_base_path, o))]
         only_folders = next(walk(local_base_path), (None, None, []))[1]
         logging.info('Sensors folder list' + str(only_folders))
-
+        # Wait for internet connection
+        PiHubHardware.wait_for_internet_available()
         for i in range(0, len(folders)):
             filenames = next(walk(folders[i]), (None, None, []))[2]  # [] if no file
             file_server_directory = remote_base_path + "/" + only_folders[i]
@@ -128,4 +129,6 @@ class SFTPUploader:
             temp_file = folders[i] + "/tempData.txt"
             SFTPUploader.sftp_merge(sftp_config, file_path_on_server=file_server_path,
                                     temporary_file=temp_file, file_to_transfer=filename_2_transfer)
+            SFTPUploader.sftp_send(sftp_config, files_directory_on_server=[file_server_directory],
+                                   files_to_transfer=[filename_2_transfer])
             logging.info('file at boot' + str(filename_2_transfer) + ' synced')

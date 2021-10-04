@@ -34,3 +34,13 @@ class PiHubHardware:
                 # Still no internet connection - reboot the pi!
                 PiHubHardware.reboot()
             logging.info('Internet is back. All is fine.')
+
+    @staticmethod
+    def wait_for_internet_available():
+        logging.debug('Watchdog - checking Internet connection')
+        while not Network.is_internet_connected():
+            logging.warning('Internet is down... Trying to reboot cellular card.')
+            # No internet connection... Try to reboot the cellular network
+            PiHubHardware.reset_cellular_network()
+            time.sleep(60)  # Wait 60 seconds to see if network is coming back online or not
+        logging.info('Internet is back. All is fine.')
