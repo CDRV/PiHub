@@ -42,7 +42,7 @@ class PiHubHardware:
 
     @staticmethod
     def wait_for_internet(timeout: int = 60):
-        logging.info("Waiting for Internet connection... Timeout = " + timeout + "s")
+        logging.info("Waiting for Internet connection... Timeout = " + str(timeout) + "s")
         while timeout > 0:
             if Network.is_internet_connected():
                 logging.info("Internet connection OK!")
