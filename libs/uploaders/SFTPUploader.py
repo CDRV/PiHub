@@ -119,7 +119,7 @@ class SFTPUploader:
         only_folders = next(walk(local_base_path), (None, None, []))[1]
         logging.info('Sensors folder list' + str(only_folders))
         # Wait for internet connection
-        PiHubHardware.wait_for_internet_available()
+        # PiHubHardware.wait_for_internet_infinite()
         for i in range(0, len(folders)):
             filenames = next(walk(folders[i]), (None, None, []))[2]  # [] if no file
             file_server_directory = remote_base_path + "/" + only_folders[i]
