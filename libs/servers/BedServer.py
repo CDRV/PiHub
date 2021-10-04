@@ -137,8 +137,6 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         # sftp.start()
 
         # Add a file merge before transfer
-        SFTPUploader.sftp_merge(sftp_config=self.sftp_config, file_path_on_server=file_server_path,
-                                temporary_file=temp_file, file_to_transfer=filename)
-
-        SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_directory_on_server=[file_server_directory],
-                               files_to_transfer=[filename])
+        SFTPUploader.sftp_merge_and_send(sftp_config=self.sftp_config, file_path_on_server=file_server_path,
+                                         file_server_location=file_server_directory, temporary_file=temp_file,
+                                         file_to_transfer=filename)

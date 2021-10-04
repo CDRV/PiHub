@@ -52,13 +52,12 @@ class SFTPUploader:
         return True
 
     @staticmethod
-    def sftp_merge(sftp_config: dict, file_path_on_server: str, file_to_transfer: str, temporary_file: str,
-                   file_transferred_callback: callable = None, check_internet: bool = True) -> bool:
+    def sftp_merge_and_send(sftp_config: dict, file_path_on_server: str, file_server_location: str,
+                            file_to_transfer: str, temporary_file: str, file_transferred_callback: callable = None,
+                            check_internet: bool = True) -> bool:
         # Check if Internet connected
         if check_internet:
             PiHubHardware.ensure_internet_is_available()
-
-        # Check if the file exist on remote and get it locally
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None
         logging.info('About to get file from server at ' + sftp_config["hostname"] + ':' + str(sftp_config["port"]))
@@ -66,33 +65,42 @@ class SFTPUploader:
             with pysftp.Connection(host=sftp_config["hostname"], username=sftp_config["username"],
                                    password=sftp_config["password"], port=sftp_config["port"],
                                    cnopts=cnopts) as s:
+                # Check if the file exist on remote and get it locally
                 if not (s.isfile(file_path_on_server)):
                     logging.info('No file on server to merge with ' + file_to_transfer)
-                    return True
-                s.get(file_path_on_server, temporary_file)
+                else:
+                    s.get(file_path_on_server, temporary_file)
+                    # Now do the merge in the local file
+                    m_point = "/mnt/app"
+                    lines = lambda f: [l for l in open(f).read().splitlines()]
+                    lines1 = lines(temporary_file)
+                    lines2 = lines(file_to_transfer)
+                    checks = [l.split(m_point)[-1] for l in lines1]
+                    for item in sum([[l for l in lines2 if c in l] for c in checks], []):
+                        lines2.remove(item)
+                    if os.path.isfile(file_to_transfer):
+                        os.remove(file_to_transfer)
+                    file_merged = open(file_to_transfer, "a+")
+                    for item in lines1 + lines2:
+                        file_merged.write(item + "\n")
+                    file_merged.close()
+                    os.remove(temporary_file)
+                    logging.info('Files for ' + file_to_transfer + ' merged')
+                # Then send it to ftp
+                if not (s.isdir(file_server_location)):
+                    s.mkdir(file_server_location)
+                with s.cd(file_server_location):
+                    s.put(localpath=file_to_transfer, preserve_mtime=True,
+                          callback=lambda current, total:
+                          SFTPUploader.file_upload_progress(current, total, file_to_transfer,
+                                                            file_transferred_callback))
+                    logging.info('Sending ' + file_to_transfer + ' to ' + file_server_location + ' ...')
+                return True
         except (pysftp.exceptions.ConnectionException, pysftp.CredentialException,
                 pysftp.AuthenticationException, pysftp.HostKeysException,
                 paramiko.SSHException, paramiko.PasswordRequiredException) as exc:
             logging.error('Error occurred transferring ' + file_path_on_server + ': ' + str(exc))
             return False
-
-        # Now do the merge in the local file
-        m_point = "/mnt/app"
-        lines = lambda f: [l for l in open(f).read().splitlines()]
-        lines1 = lines(temporary_file)
-        lines2 = lines(file_to_transfer)
-        checks = [l.split(m_point)[-1] for l in lines1]
-        for item in sum([[l for l in lines2 if c in l] for c in checks], []):
-            lines2.remove(item)
-        if os.path.isfile(file_to_transfer):
-            os.remove(file_to_transfer)
-        file_merged = open(file_to_transfer, "a+")
-        for item in lines1 + lines2:
-            file_merged.write(item + "\n")
-        file_merged.close()
-        os.remove(temporary_file)
-        logging.info('Files for ' + file_to_transfer + ' merged')
-        return True
 
     @staticmethod
     def file_upload_progress(current_bytes: int, total_bytes: int, filename: str = 'Unknown',
@@ -119,7 +127,7 @@ class SFTPUploader:
         only_folders = next(walk(local_base_path), (None, None, []))[1]
         logging.info('Sensors folder list' + str(only_folders))
         # Wait for internet connection
-        # PiHubHardware.wait_for_internet_infinite()
+        # PiHubHardware.wait_for_internet_infinite ()
         for i in range(0, len(folders)):
             filenames = next(walk(folders[i]), (None, None, []))[2]  # [] if no file
             file_server_directory = remote_base_path + "/" + only_folders[i]
@@ -127,8 +135,7 @@ class SFTPUploader:
             # something more robust)
             file_server_path = file_server_directory + "/" + filenames[0]
             temp_file = folders[i] + "/tempData.txt"
-            SFTPUploader.sftp_merge(sftp_config, file_path_on_server=file_server_path,
-                                    temporary_file=temp_file, file_to_transfer=filename_2_transfer)
-            SFTPUploader.sftp_send(sftp_config, files_directory_on_server=[file_server_directory],
-                                   files_to_transfer=[filename_2_transfer])
-            logging.info('file at boot' + str(filename_2_transfer) + ' synced')
+            SFTPUploader.sftp_merge_and_send(sftp_config, file_path_on_server=file_server_path,
+                                             file_server_location=file_server_directory, temporary_file=temp_file,
+                                             file_to_transfer=filename_2_transfer)
+            logging.info('file at boot ' + str(filename_2_transfer) + ' synced')
