@@ -24,7 +24,8 @@ class PiHubHardware:
 
     @staticmethod
     def ensure_internet_is_available():
-        threading.Lock().acquire()  # Ensure only one thread run the following code at a time
+        lock = threading.Lock()
+        lock.acquire()  # Ensure only one thread run the following code at a time
 
         logging.debug('Watchdog - checking Internet connection')
         if not Network.is_internet_connected():
@@ -38,7 +39,7 @@ class PiHubHardware:
                 PiHubHardware.reboot()
             logging.info('Internet is back. All is fine.')
 
-        threading.Lock().release()
+        lock.release()
 
     @staticmethod
     def wait_for_internet(timeout: int = 60):
