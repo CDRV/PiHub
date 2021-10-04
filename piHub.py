@@ -38,6 +38,9 @@ if __name__ == '__main__':
     # Initializing...
     servers = []
 
+    # Wait for Internet connection
+    PiHubHardware.wait_for_internet()
+
     # Bed Server
     if config_man.general_config["enable_bed_server"]:
         # Start bed server

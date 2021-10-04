@@ -6,6 +6,7 @@
 import os
 import time
 import logging
+import threading
 from libs.utils.Network import Network
 
 
@@ -23,6 +24,8 @@ class PiHubHardware:
 
     @staticmethod
     def ensure_internet_is_available():
+        threading.Lock().acquire()  # Ensure only one thread run the following code at a time
+
         logging.debug('Watchdog - checking Internet connection')
         if not Network.is_internet_connected():
             logging.warning('Internet is down... Trying to reboot cellular card.')
@@ -34,3 +37,18 @@ class PiHubHardware:
                 # Still no internet connection - reboot the pi!
                 PiHubHardware.reboot()
             logging.info('Internet is back. All is fine.')
+
+        threading.Lock().release()
+
+    @staticmethod
+    def wait_for_internet(timeout: int = 60):
+        logging.info("Waiting for Internet connection... Timeout = " + timeout + "s")
+        while timeout > 0:
+            if Network.is_internet_connected():
+                logging.info("Internet connection OK!")
+                return  # All is fine - back to normal operation
+            time.sleep(5)
+            timeout = timeout - 5
+
+        logging.warning("No Internet connection - trying to reset...")
+        PiHubHardware.ensure_internet_is_available()
