@@ -38,7 +38,7 @@ int timeWifi;
 int waitWifi;
 const int time2WaitWifi = 30e6; // only 30sec
 bool wifiTranfered = false;
-const char * device = "ESP32_00A"; // <================================== HERE!
+const char * device = "ESP32_018"; // <================================== HERE!
 
 // Other
 int LED_PIN = 13; // Onboard DEL
@@ -59,8 +59,8 @@ void setup() {
   // Initilize hardware:
   Serial.begin(115200); // Serial port to display status and help debug
   Serial.println();
-  pinMode(LED_PIN, OUTPUT);
   pinMode(powerDO_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   delay(500);
 
   //Allow wakup by switch on board (GPIO 0)
@@ -77,6 +77,7 @@ void setup() {
 //Main loop
 void loop() {
   // Light ON
+  rtc_gpio_hold_dis(GPIO_NUM_25);
   digitalWrite(LED_PIN, HIGH);
   digitalWrite(powerDO_PIN, HIGH);
   // Read analog input and store it to next available space in rtcData
