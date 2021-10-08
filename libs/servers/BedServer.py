@@ -13,6 +13,9 @@ from os import makedirs
 from datetime import datetime
 from pathlib import Path
 
+import threading
+import os
+
 
 class BedServer(BaseServer):
     server = None
@@ -29,7 +32,7 @@ class BedServer(BaseServer):
         # Sync local files with the ones on the server
         try:
             SFTPUploader.sftp_sync_last(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
-                                        remote_base_path=self.server_base_folder)
+                                        remote_base_path=self.server_base_folder, check_internet=False)
             # SFTPUploader.sftp_sync(sftp_config=self.sftp_config, local_base_path=str(full_path.absolute()),
             #                      remote_base_path=self.server_base_folder)
         except Exception as e:
@@ -39,8 +42,9 @@ class BedServer(BaseServer):
     def run(self):
         logging.info('BedServer starting...')
 
-        # Check if all files are on sync on the server
-        self.sync_files()
+        # Check if all files are on sync on the server, do it on a thread so the logger still start
+        thread_sync = threading.Thread(target=self.sync_files)
+        thread_sync.start()
 
         try:
             # Add custom values that are need in the request handler
@@ -92,7 +96,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         # Establish the correct filename (will be updated each time the sensor is connected
         # Will append the file or create a new one if non-existing
         # filename = Path("/home/pi/Desktop/Data/"+str(datetime.datetime.now().date())+".txt")
-        filepath = self.data_path + '/' + str(greetings)
+        filepath = self.data_path + '/local_only/' + str(greetings)
         try:
             makedirs(name=filepath, exist_ok=True)
         except OSError as exc:
@@ -130,7 +134,12 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         # Send file using SFTP
         file_server_directory = "/" + self.server_base_folder + "/" + str(greetings)
         file_server_path = file_server_directory + "/" + str(datetime.now().date()) + ".txt"
-        temp_file = self.data_path + "/" + str(greetings) + "/tempData.txt"
+        temp_file = self.data_path + "/local_only/" + str(greetings) + "/tempData.txt"
+        file_transferred_directory = self.data_path + "/transferred/" + str(greetings)
+        logging.info("try to create " + file_transferred_directory + str(not os.path.isdir(file_transferred_directory)))
+        if not os.path.isdir(file_transferred_directory):
+            makedirs(file_transferred_directory)
+        file_transferred_location = file_transferred_directory + "/" + str(datetime.now().date()) + ".txt"
         # Start SFTP transfer in a new thread, so this one doesn't wait on the transfer
         # sftp = threading.Thread(target=SFTPUploader.sftp_send, args=(self.sftp_config, file_server_location,
         #                                                              filename))
@@ -139,4 +148,4 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         # Add a file merge before transfer
         SFTPUploader.sftp_merge_and_send(sftp_config=self.sftp_config, file_path_on_server=file_server_path,
                                          file_server_location=file_server_directory, temporary_file=temp_file,
-                                         file_to_transfer=filename)
+                                         file_transferred_location=file_transferred_location, file_to_transfer=filename)

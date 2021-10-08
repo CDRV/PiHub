@@ -38,7 +38,7 @@ int timeWifi;
 int waitWifi;
 const int time2WaitWifi = 30e6; // only 30sec
 bool wifiTranfered = false;
-const char * device = "ESP32_018"; // <================================== HERE!
+const char * device = "ESP32_015"; // <================================== HERE!
 
 // Other
 int LED_PIN = 13; // Onboard DEL

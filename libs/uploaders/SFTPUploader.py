@@ -13,6 +13,10 @@ from libs.hardware.PiHubHardware import PiHubHardware
 
 from sftpclone import sftpclone
 
+from libs.utils.Network import Network
+import time
+from os import makedirs
+
 
 class SFTPUploader:
 
@@ -53,7 +57,8 @@ class SFTPUploader:
 
     @staticmethod
     def sftp_merge_and_send(sftp_config: dict, file_path_on_server: str, file_server_location: str,
-                            file_to_transfer: str, temporary_file: str, file_transferred_callback: callable = None,
+                            file_to_transfer: str, temporary_file: str, file_transferred_location: str,
+                            file_transferred_callback: callable = None,
                             check_internet: bool = True) -> bool:
         # Check if Internet connected
         if check_internet:
@@ -95,6 +100,10 @@ class SFTPUploader:
                           SFTPUploader.file_upload_progress(current, total, file_to_transfer,
                                                             file_transferred_callback))
                     logging.info('Sending ' + file_to_transfer + ' to ' + file_server_location + ' ...')
+                # Move the local file in the transferred directory
+                if os.path.isfile(file_transferred_location):
+                    os.remove(file_transferred_location)
+                os.replace(file_to_transfer, file_transferred_location)
                 return True
         except (pysftp.exceptions.ConnectionException, pysftp.CredentialException,
                 pysftp.AuthenticationException, pysftp.HostKeysException,
@@ -121,21 +130,35 @@ class SFTPUploader:
         cloner.run()
 
     @staticmethod
-    def sftp_sync_last(sftp_config: dict, remote_base_path: str, local_base_path: str):
-        folders = [os.path.join(local_base_path, o) for o in os.listdir(local_base_path)
-                   if os.path.isdir(os.path.join(local_base_path, o))]
-        only_folders = next(walk(local_base_path), (None, None, []))[1]
+    def sftp_sync_last(sftp_config: dict, remote_base_path: str, local_base_path: str, check_internet: bool = True):
+        folders = [os.path.join(local_base_path + '/local_only/', o)
+                   for o in os.listdir(local_base_path + '/local_only/')
+                   if os.path.isdir(os.path.join(local_base_path + '/local_only/', o))]
+        only_folders = next(walk(local_base_path + '/local_only/'), (None, None, []))[1]
         logging.info('Sensors folder list' + str(only_folders))
+        logging.info('Sensors complete folder list' + str(folders))
         # Wait for internet connection
         # PiHubHardware.wait_for_internet_infinite ()
+        logging.info("BedServer: Testing the internet connection...")
+        while not(Network.is_internet_connected()):
+            logging.info("BedServer: Connection failed, retry sync in 10min...")
+            time.sleep(600)
+        logging.info("BedServer: Pass, syncing files to server...")
         for i in range(0, len(folders)):
             filenames = next(walk(folders[i]), (None, None, []))[2]  # [] if no file
-            file_server_directory = remote_base_path + "/" + only_folders[i]
-            filename_2_transfer = folders[i] + "/" + filenames[0]  # Only the last file in directory is 0 (change to
-            # something more robust)
-            file_server_path = file_server_directory + "/" + filenames[0]
-            temp_file = folders[i] + "/tempData.txt"
-            SFTPUploader.sftp_merge_and_send(sftp_config, file_path_on_server=file_server_path,
-                                             file_server_location=file_server_directory, temporary_file=temp_file,
-                                             file_to_transfer=filename_2_transfer)
-            logging.info('file at boot ' + str(filename_2_transfer) + ' synced')
+            for j in range(0, len(filenames)):
+                file_server_directory = remote_base_path + "/" + only_folders[i]
+                filename_2_transfer = folders[i] + "/" + filenames[j]  # Only the last file in directory is 0 (change to
+                # something more robust)
+                file_server_path = file_server_directory + "/" + filenames[j]
+                file_transferred_directory = local_base_path + "/transferred/" + only_folders[i]
+                if not os.path.isdir(file_transferred_directory):
+                    makedirs(file_transferred_directory)
+                file_transferred_location = file_transferred_directory + "/" + filenames[j]
+                temp_file = folders[i] + "/tempData.txt"
+                SFTPUploader.sftp_merge_and_send(sftp_config, file_path_on_server=file_server_path,
+                                                 file_server_location=file_server_directory, temporary_file=temp_file,
+                                                 file_transferred_location=file_transferred_location,
+                                                 file_to_transfer=filename_2_transfer, check_internet=check_internet)
+                logging.info('file at boot ' + str(filename_2_transfer) + ' synced')
+            os.rmdir(folders[i])
