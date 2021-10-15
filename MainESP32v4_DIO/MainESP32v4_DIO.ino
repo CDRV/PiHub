@@ -17,7 +17,7 @@
 #include "driver/rtc_io.h"
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  10        // Time ESP32 will go to sleep (in seconds), 60s by default 
+#define TIME_TO_SLEEP  60        // Time ESP32 will go to sleep (in seconds), 60s by default 
 
 // WiFi network name and password:
 const char * ssid = "OpenTeraHub";
@@ -38,11 +38,13 @@ int timeWifi;
 int waitWifi;
 const int time2WaitWifi = 20e6; // only 20sec
 bool wifiTranfered = false;
-const char * device = "ESP32_015"; // <================================== HERE!
+const char * device = "ESP32_030"; // <================================== HERE!
 
 // Other
 int LED_PIN = 13; // Onboard DEL
 int powerDO_PIN = 25; // Onboard to power the FSR when ON (A1)
+int slp_pin = 0; //Onboard slp swith
+int slp_val = 0;
 const int analogInPin = A0;  // ESP32 Analog Pin ADC0 = A0
 int i;
 int t_depart = millis();
@@ -51,55 +53,40 @@ bool wkupSW = false;
 
 //Setup
 void setup() {
-//  esp_wifi_stop();
-//  // reduce CPU speed for battery consumption
-//  setCpuFrequencyMhz(80);
-//  //Start timer
+  //Start timer
   t_depart = millis();
 
-  // Initilize hardware:
+  //Initilize hardware:
   Serial.begin(115200); // Serial port to display status and help debug
-  //Serial.println();
+  Serial.println();
   pinMode(powerDO_PIN, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
-//  delay(500);
-
-  //Allow wakup by switch on board (GPIO 0)
-//  esp_sleep_wakeup_cause_t wakeup_reason;
-//  wakeup_reason = esp_sleep_get_wakeup_cause();
-//  switch (wakeup_reason)
-//  {
-//    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by switch 0"); wkupSW = true; break;
-//    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
-//    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason); break;
-//  }
+  pinMode(slp_pin, INPUT);
 }
 
 //Main loop
 void loop() {
-  // Light ON
-  rtc_gpio_hold_dis(GPIO_NUM_25);
-  digitalWrite(LED_PIN, HIGH);
-  digitalWrite(powerDO_PIN, HIGH);
-  // Read analog input and store it to next available space in rtcData
+  // Record one point
+  rtc_gpio_hold_dis(GPIO_NUM_25); //Enable the DO vcc
+  rtc_gpio_hold_dis(GPIO_NUM_13); //Enable the LED DO
+  rtc_gpio_hold_dis(GPIO_NUM_0); //Enable the SLP DI
+  digitalWrite(LED_PIN, HIGH); // Set the LED to High
+  digitalWrite(powerDO_PIN, HIGH); // Set the DO vcc to High
   adc_power_on(); // added because we turn it off after
-  sensorValue = analogRead(analogInPin);
+  sensorValue = analogRead(analogInPin); // Read analog input 
   adc_power_off();  // turn it off right after reading it
-  digitalWrite(powerDO_PIN, LOW);
-  rtc_gpio_isolate(GPIO_NUM_25);
-  rtcData.data[rtcData.nbpts] = sensorValue;
-  // Set the LED to Low
-  digitalWrite(LED_PIN, LOW);
+  digitalWrite(powerDO_PIN, LOW); // Set the DO vcc to Low
+  digitalWrite(LED_PIN, LOW); // Set the LED to Low
+  slp_val = digitalRead(slp_pin); //Read the value on the reset switch
+  rtc_gpio_isolate(GPIO_NUM_25); //Disable the DO vcc
+  rtc_gpio_isolate(GPIO_NUM_13); //Disable the LED DO
+  rtc_gpio_isolate(GPIO_NUM_0); //Disable the SLP DI
+  rtcData.data[rtcData.nbpts] = sensorValue; // store the data point to next available space in rtcData
 
   Serial.print("Nb pts recorded: ");
   Serial.println(rtcData.nbpts + 1);
-//  Serial.print("rtcData: ");
-//  for (i = 0 ; i < lengthData ; i++) {
-//    Serial.print(rtcData.data[i]);
-//    Serial.print("  ");
-//  }
   Serial.print("last rtcData: "); // much faster, less wakeup time.
-  Serial.print(rtcData.data[lengthData]);
+  Serial.print(rtcData.data[rtcData.nbpts]);
   Serial.println();
   rtcData.nbpts++;
 
@@ -130,56 +117,25 @@ void loop() {
       rtcData.nbpts = rtcData.nbpts-1;
     }
   }
-//  else if (wkupSW == true) {
-//    if (rtcData.nbpts >= lengthData){
-//      // Reset Structure
-//      rtcData.nbpts = 0;
-//      memset(rtcData.data, 0, sizeof(rtcData.data));
-//    } 
-//    //fill empty values with 9999:
-//    for (i = 0 ; i < lengthData - rtcData.nbpts; i++) {
-//      rtcData.data[i+rtcData.nbpts] = 9999;
-//    }
-//    // Connect to the WiFi network and transmit (see function below loop)
-//    uint16_t data2send[rtcData.nbpts];
-//    for (i = 0 ; i < rtcData.nbpts; i++) {
-//      data2send[i] = rtcData.data[i];
-//    }       
-//    ConnectWIFI((uint8_t*) &data2send, rtcData.nbpts*sizeof(uint16_t));   //ConnectWIFI((uint8_t*) &rtcData.data, lengthData*sizeof(uint16_t));
-//    if (wifiTranfered){
-//      Serial.println("Incomplete data sended");
-//    }
-//    else {
-//      Serial.println("Data not sended, check wifi");
-//    }
-//    Serial.println("Going to infinite sleep mode");
-//    //esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); //1 = High, 0 = Low
-//    esp_deep_sleep_start();
-//  }
 
-  //Check time wasted in the loop to substract it(We want one point each 60s as much as pos
-  t_total = millis() - t_depart;
-//  Serial.print("Iteration wasted time: ");
-//  Serial.println(t_total / 1e3);
-  if (t_total > TIME_TO_SLEEP * 1e3) {
-    t_total = TIME_TO_SLEEP * 1e3;
-    Serial.print("Too Much time wasted, no deep sleep this iteration!");
-    Serial.println();
-    esp_sleep_enable_timer_wakeup(1); // still deepsleep but only 1us to activate timers
-    esp_deep_sleep_start();
-  } else {
+  //check if slp_switch pressed
+  if (slp_val == 1) {
+    //Check time wasted in the loop to substract it (We want one point each 60s as much as pos
+    t_total = millis() - t_depart;
     Serial.print("Sleep for: ");
     Serial.println((TIME_TO_SLEEP * 1e3 - t_total) / 1e3);
     Serial.println();
-    Serial.println();
-    //esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); //1 = High, 0 = Low
     esp_sleep_enable_timer_wakeup((TIME_TO_SLEEP * 1e3 - t_total) * uS_TO_S_FACTOR / 1e3);
-
-    //Add the shutdown manualy before sleep, just to be sure
-    esp_wifi_stop();
-    esp_bt_controller_disable();
-    esp_deep_sleep_start();
   }
+  else {
+    Serial.println("Slp_switch pressed, infinite sleep");
+    Serial.println();
+  }
+  //Start the deep sleep
+  esp_wifi_stop();
+  esp_bt_controller_disable();
+  esp_deep_sleep_start();
+  
 }
 
 //WIFI function
