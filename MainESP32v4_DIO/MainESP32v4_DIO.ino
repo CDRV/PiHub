@@ -128,7 +128,8 @@ void loop() {
     esp_sleep_enable_timer_wakeup((TIME_TO_SLEEP * 1e3 - t_total) * uS_TO_S_FACTOR / 1e3);
   }
   else {
-    Serial.println("Slp_switch pressed, infinite sleep");
+    Serial.println("Slp_switch pressed, send nbpts and infinite sleep");
+    ConnectWIFI((uint8_t*) &rtcData.nbpts, 1*sizeof(uint16_t));
     Serial.println();
   }
   //Start the deep sleep
