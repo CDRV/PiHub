@@ -1,0 +1,33 @@
+{
+  "General": {
+    "enable_logging": true,
+    "enable_bed_server": true,
+    "enable_watch_server": true,
+    "logs_path": "logs"
+  },
+  "WatchServer": {
+    "hostname": "0.0.0.0",
+    "port": 8118,
+    "data_path": "data/watch",
+    "sftp_transfer": true,
+    "opentera_transfer": false,
+    "server_base_folder": "Watch",
+    "send_logs_only": false
+  },
+  "BedServer": {
+    "hostname": "0.0.0.0",
+    "port": 3000,
+    "data_path": "data/bed",
+    "server_base_folder": "Bed"
+  },
+  "SFTP": {
+    "hostname": "telesante.cdrv.ca",
+    "port": 40091,
+    "username": "dev",
+    "password": "tr3cr100"
+  },
+  "OpenTera": {
+    "hostname": "localhost",
+    "port": 40075
+  }
+}
