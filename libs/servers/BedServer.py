@@ -63,7 +63,7 @@ class BedServer(BaseServer):
             logging.critical(str(e))
             return
 
-        self.server.timeout = 10.0
+        # self.server.timeout = 10.0
         self.is_running = True
         logging.info("BedServer started on port " + str(self.port))
         try:
@@ -115,6 +115,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
 
         # Loop to transfer data (2 bytes at a time - UINT16 are read from RAM and transmitted by ESP
         logging.info('Starting data transfer...')
+        self.request.settimeout(10)
         while self.connection:
             try:
                 d1minidata = self.request.recv(2)  # self.rfile.read(2)
@@ -123,9 +124,16 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
                 else:
                     x = int.from_bytes(d1minidata, byteorder='little', signed=False)
                     file.write(str(x) + "\t")
-            except TimeoutError as e:
-                self.rfile.close()
+            except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
                 logging.error("Timeout receiving data.")
+                self.request.settimeout(1.0)
+                while 1:
+                    try:
+                        self.request.recv(1)  # Clear all pending bytes, if available.
+                    except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
+                        break
+                self.rfile.close()
+                logging.error("Remote stream closed")
                 break
         logging.info("Data transfer complete.")
         file.write("\n")
