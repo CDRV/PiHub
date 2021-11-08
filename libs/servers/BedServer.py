@@ -126,14 +126,14 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
                     file.write(str(x) + "\t")
             except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
                 logging.error("Timeout receiving data.")
-                self.request.settimeout(1.0)
-                while 1:
-                    try:
-                        self.request.recv(1)  # Clear all pending bytes, if available.
-                    except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
-                        break
+                # self.request.settimeout(1.0)
+                # while 1:
+                #     try:
+                #         self.request.recv(1)  # Clear all pending bytes, if available.
+                #     except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
+                #         break
                 self.rfile.close()
-                logging.error("Remote stream closed")
+                # logging.error("Remote stream closed")
                 break
         logging.info("Data transfer complete.")
         file.write("\n")
