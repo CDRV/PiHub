@@ -15,6 +15,7 @@ from pathlib import Path
 
 import threading
 import os
+import socket
 
 
 class BedServer(BaseServer):
@@ -124,7 +125,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
                 else:
                     x = int.from_bytes(d1minidata, byteorder='little', signed=False)
                     file.write(str(x) + "\t")
-            except (TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
+            except (socket.timeout, TimeoutError, ConnectionResetError, ConnectionAbortedError, ConnectionError):
                 logging.error("Timeout receiving data.")
                 # self.request.settimeout(1.0)
                 # while 1:
@@ -144,7 +145,8 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         file_server_path = file_server_directory + "/" + str(datetime.now().date()) + ".txt"
         temp_file = self.data_path + "/local_only/" + str(greetings) + "/tempData.txt"
         file_transferred_directory = self.data_path + "/transferred/" + str(greetings)
-        logging.info("try to create " + file_transferred_directory + str(not os.path.isdir(file_transferred_directory)))
+        logging.info("Try to create " + file_transferred_directory + ", dir exists = " +
+                     str(not os.path.isdir(file_transferred_directory)))
         if not os.path.isdir(file_transferred_directory):
             makedirs(file_transferred_directory)
         file_transferred_location = file_transferred_directory + "/" + str(datetime.now().date()) + ".txt"
