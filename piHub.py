@@ -6,6 +6,7 @@
 ##################################################
 import time
 import logging
+import sys
 
 from libs.config.ConfigManager import ConfigManager
 from libs.servers.BedServer import BedServer
@@ -13,6 +14,18 @@ from libs.servers.WatchServer import WatchServer
 from libs.hardware.PiHubHardware import PiHubHardware
 
 from Globals import version_string
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
+
 
 if __name__ == '__main__':
     # Logging module
