@@ -82,10 +82,10 @@ class WatchServer(BaseServer):
             if self.sftp_transfer:
                 # Send files using sftp
                 # Sending files
-                SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
-                                       files_directory_on_server=file_folders,
-                                       file_transferred_callback=self.file_was_processed,
-                                       check_internet=check_internet)
+                success = SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
+                                                 files_directory_on_server=file_folders,
+                                                 file_transferred_callback=self.file_was_processed,
+                                                 check_internet=check_internet)
 
             # Set files as processed
             self.move_processed_files()
