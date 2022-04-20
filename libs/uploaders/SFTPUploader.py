@@ -31,6 +31,7 @@ class SFTPUploader:
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None
         logging.info('About to send files to server at ' + sftp_config["hostname"] + ':' + str(sftp_config["port"]))
+        file_to_transfer = None
         try:
             with pysftp.Connection(host=sftp_config["hostname"], username=sftp_config["username"],
                                    password=sftp_config["password"], port=sftp_config["port"],
@@ -49,7 +50,10 @@ class SFTPUploader:
         except (pysftp.exceptions.ConnectionException, pysftp.CredentialException,
                 pysftp.AuthenticationException, pysftp.HostKeysException,
                 paramiko.SSHException, paramiko.PasswordRequiredException) as exc:
-            logging.error('Error occurred transferring ' + file_to_transfer + ': ' + str(exc))
+            if file_to_transfer:
+                logging.error('Error occurred transferring ' + file_to_transfer + ': ' + str(exc))
+            else:
+                logging.error('Error occured while trying to transfer: ' + str(exc))
             return False
 
         logging.info('Files transfer complete!')
