@@ -3,6 +3,7 @@
     "enable_logging": true,
     "enable_bed_server": true,
     "enable_watch_server": true,
+    "enable_folderWatcher_server": false,
     "logs_path": "logs"
   },
   "WatchServer": {
@@ -19,6 +20,13 @@
     "port": 3000,
     "data_path": "data/bed",
     "server_base_folder": "Bed"
+  },
+  "FolderWatcher": {
+    "hostname": "0.0.0.0",
+    "port": 30001,
+    "data_path": "data/folderData",
+    "server_base_folder": "FolderData",
+    "sensor_ID": "Sensor_0"
   },
   "SFTP": {
     "hostname": "telesante.cdrv.ca",
