@@ -1,9 +1,9 @@
 {
   "General": {
-    "enable_logging": true,
-    "enable_bed_server": true,
-    "enable_watch_server": true,
-    "enable_folderWatcher_server": false,
+    "enable_logging": false,
+    "enable_bed_server": false,
+    "enable_watch_server": false,
+    "enable_folderWatcher_server": true,
     "logs_path": "logs"
   },
   "WatchServer": {

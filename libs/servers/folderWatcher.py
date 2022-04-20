@@ -48,7 +48,7 @@ class FolderWatcher(BaseServer):
             thread_sync.start()
         else:
             logging.info("FolderWatcher: No Data Folder to sync at start")
-            os.mkdir(path_to_watch)
+            os.makedirs(path_to_watch)
         before = dict([(f, None) for f in os.listdir(path_to_watch)])
 
         logging.info("folderWatcher started")
@@ -58,7 +58,7 @@ class FolderWatcher(BaseServer):
                 time.sleep(1)
                 # Add this because we remove the folder if everything is transferred:
                 if not (os.path.isdir(path_to_watch)):
-                    os.mkdir(path_to_watch)
+                    os.makedirs(path_to_watch)
                 after = dict([(f, None) for f in os.listdir(path_to_watch)])
                 added = [f for f in after if not f in before]
                 removed = [f for f in before if not f in after]
@@ -83,7 +83,8 @@ class FolderWatcher(BaseServer):
                                                          file_server_location=file_server_directory,
                                                          temporary_file=temp_file,
                                                          file_transferred_location=file_transferred_location,
-                                                         file_to_transfer=filename)
+                                                         file_to_transfer=filename,
+                                                         check_internet=False)
                 if removed:
                     logging.info("FolderWatcher: Local file(s) Removed: " + ", ".join(removed))
                 before = after
