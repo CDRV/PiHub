@@ -16,6 +16,7 @@ class ConfigManager:
         self.opentera_config = {}
         self.bed_server_config = {}
         self.watch_server_config = {}
+        self.folderWatcher_server_config = {}
 
     def load_config(self, filename) -> bool:
         try:
@@ -47,6 +48,10 @@ class ConfigManager:
         if self.validate_config("BedServer", config_json['BedServer'], ['hostname', 'port', 'data_path',
                                                                         'server_base_folder']):
             self.bed_server_config = config_json["BedServer"]
+
+        if self.validate_config("FolderWatcher", config_json['FolderWatcher'], ['data_path',
+                                                                                'server_base_folder', 'sensor_ID']):
+            self.folderWatcher_server_config = config_json["FolderWatcher"]
 
         return True
 
