@@ -27,6 +27,8 @@ class WatchServer(BaseServer):
         self.opentera_transfer = server_config['opentera_transfer']
         self.send_logs_only = server_config['send_logs_only']
 
+        self.synching_files = False
+
     def run(self):
         logging.info('Apple Watch Server starting...')
 
@@ -55,6 +57,12 @@ class WatchServer(BaseServer):
 
     def sync_files(self, check_internet: bool = True):
         logging.info("WatchServer: Synchronizing files with server...")
+
+        if self.synching_files:
+            logging_info("*** WatchServer: Already synching files. Will wait for next time.")
+            return
+
+        self.synching_files = True
         # Build list of files to transfer
         base_folder = self.data_path + '/ToProcess/'
         files = []
@@ -82,10 +90,10 @@ class WatchServer(BaseServer):
             if self.sftp_transfer:
                 # Send files using sftp
                 # Sending files
-                SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
-                                       files_directory_on_server=file_folders,
-                                       file_transferred_callback=self.file_was_processed,
-                                       check_internet=check_internet)
+                success = SFTPUploader.sftp_send(sftp_config=self.sftp_config, files_to_transfer=full_files,
+                                                 files_directory_on_server=file_folders,
+                                                 file_transferred_callback=self.file_was_processed,
+                                                 check_internet=check_internet)
 
             # Set files as processed
             self.move_processed_files()
@@ -96,6 +104,7 @@ class WatchServer(BaseServer):
         # Clean up empty folders
         WatchServer.remove_empty_folders(Path(base_folder).absolute())
         logging.info("WatchServer: Synchronization done.")
+        self.synching_files = False
 
     def file_was_processed(self, full_filepath: str):
         # Mark file as processed - will be moved later on to prevent conflicts

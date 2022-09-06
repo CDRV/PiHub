@@ -31,6 +31,7 @@ class SFTPUploader:
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None
         logging.info('About to send files to server at ' + sftp_config["hostname"] + ':' + str(sftp_config["port"]))
+        file_to_transfer = None
         try:
             with pysftp.Connection(host=sftp_config["hostname"], username=sftp_config["username"],
                                    password=sftp_config["password"], port=sftp_config["port"],
@@ -49,7 +50,10 @@ class SFTPUploader:
         except (pysftp.exceptions.ConnectionException, pysftp.CredentialException,
                 pysftp.AuthenticationException, pysftp.HostKeysException,
                 paramiko.SSHException, paramiko.PasswordRequiredException) as exc:
-            logging.error('Error occurred transferring ' + file_to_transfer + ': ' + str(exc))
+            if file_to_transfer:
+                logging.error('Error occurred transferring ' + file_to_transfer + ': ' + str(exc))
+            else:
+                logging.error('Error occured while trying to transfer: ' + str(exc))
             return False
 
         logging.info('Files transfer complete!')
@@ -139,17 +143,17 @@ class SFTPUploader:
         logging.info('Sensors complete folder list' + str(folders))
         # Wait for internet connection
         # PiHubHardware.wait_for_internet_infinite ()
-        logging.info("BedServer: Testing the internet connection...")
+        logging.info("SyncServer: Testing the internet connection...")
         while not(Network.is_internet_connected()):
-            logging.info("BedServer: Connection failed, retry sync in 10min...")
+            logging.info("SyncServer: Connection failed, retry sync in 10min...")
             time.sleep(600)
-        logging.info("BedServer: Pass, syncing files to server...")
+        logging.info("SyncServer: Pass, syncing files to server...")
+        # It is called sync_last but has been modified to sync all files!
         for i in range(0, len(folders)):
             filenames = next(walk(folders[i]), (None, None, []))[2]  # [] if no file
             for j in range(0, len(filenames)):
                 file_server_directory = remote_base_path + "/" + only_folders[i]
-                filename_2_transfer = folders[i] + "/" + filenames[j]  # Only the last file in directory is 0 (change to
-                # something more robust)
+                filename_2_transfer = folders[i] + "/" + filenames[j]  # all files are synced
                 file_server_path = file_server_directory + "/" + filenames[j]
                 file_transferred_directory = local_base_path + "/transferred/" + only_folders[i]
                 if not os.path.isdir(file_transferred_directory):
