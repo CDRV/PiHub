@@ -95,8 +95,9 @@ class WatchServer(BaseServer):
                                                  file_transferred_callback=self.file_was_processed,
                                                  check_internet=check_internet)
 
-            # Set files as processed
-            self.move_processed_files()
+                # Set files as processed
+                if success:
+                    self.move_processed_files()
             # for file in full_files:
             #     WatchServer.file_was_processed(file)
         else:
