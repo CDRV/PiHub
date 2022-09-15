@@ -121,13 +121,15 @@ class WatchServer(BaseServer):
                 os.makedirs(name=target_dir, exist_ok=True)
             except OSError as exc:
                 logging.error('Error creating ' + target_dir + ': ' + exc.strerror)
-                raise
+                continue
+                # raise
 
             try:
                 os.replace(full_filepath, target_file)
             except (OSError, IOError) as exc:
                 logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
-                raise
+                continue
+                # raise
             # logging.info("Processed file: " + full_filepath)
 
         self.processed_files.clear()
