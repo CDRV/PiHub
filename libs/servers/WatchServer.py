@@ -26,6 +26,7 @@ class WatchServer(BaseServer):
         self.sftp_transfer = server_config['sftp_transfer']
         self.opentera_transfer = server_config['opentera_transfer']
         self.send_logs_only = server_config['send_logs_only']
+        self.minimal_dataset_duration = server_config['minimal_dataset_duration']
 
         self.synching_files = False
 
@@ -59,7 +60,7 @@ class WatchServer(BaseServer):
         logging.info("WatchServer: Synchronizing files with server...")
 
         if self.synching_files:
-            logging_info("*** WatchServer: Already synching files. Will wait for next time.")
+            logging.info("*** WatchServer: Already synching files. Will wait for next time.")
             return
 
         self.synching_files = True
@@ -70,13 +71,39 @@ class WatchServer(BaseServer):
         file_folders = []
         for (dp, dn, f) in os.walk(base_folder):
             if f:
+                dp = dp.replace('/', os.sep)
                 if self.send_logs_only:
                     # Filter list of files to keep only log files
                     folder_files = [file for file in f if file.lower().endswith("txt") or file.lower().endswith("oimi")]
                 else:
+                    if self.minimal_dataset_duration > 0:
+                        # Filter dataset that are too small (<10 seconds)
+                        if 'watch_logs.txt' in f:
+                            import csv
+                            try:
+                                with open(os.path.join(dp, 'watch_logs.txt'), newline='') as csvfile:
+                                    log_reader = csv.reader(csvfile, delimiter='\t')
+                                    first_timestamp = None
+                                    for row in log_reader:
+                                        if len(row) == 0:
+                                            continue
+                                        if not first_timestamp:
+                                            first_timestamp = row[0]
+                                        last_timestamp = row[0]
+                                duration = float(last_timestamp) - float(first_timestamp)
+                                if duration <= self.minimal_dataset_duration:
+                                    # Must reject! Too short!
+                                    self.move_files([os.path.join(dp, file) for file in f], 'Rejected')
+                                    logging.info('Rejected folder ' + dp + ': dataset too small.')
+                                    continue  # Move to next folder
+                            except IOError:
+                                pass  # Ignore error and move on!
+                            except AssertionError:
+                                pass
+
                     folder_files = f
                 files.extend(folder_files)
-                full_files.extend([os.path.join(dp.replace('/', os.sep), file) for file in folder_files])
+                full_files.extend([os.path.join(dp, file) for file in folder_files])
                 file_folder = dp.replace(base_folder, '')
                 file_folders.extend("/" + self.server_base_folder + "/" + file_folder.replace(os.sep, '/')
                                     for _ in folder_files)
@@ -111,10 +138,10 @@ class WatchServer(BaseServer):
         # Mark file as processed - will be moved later on to prevent conflicts
         self.processed_files.append(full_filepath)
 
-    def move_processed_files(self):
-        for full_filepath in self.processed_files:
-            # Move file to the "Processed" folder
-            target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + 'Processed' + os.sep)
+    def move_files(self, source_files, target_folder):
+        for full_filepath in source_files:
+            # Move file from "ToProcess" to the target folder
+            target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + target_folder + os.sep)
 
             # Create directory, if needed
             target_dir = os.path.dirname(target_file)
@@ -131,7 +158,29 @@ class WatchServer(BaseServer):
                 logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
                 continue
                 # raise
-            # logging.info("Processed file: " + full_filepath)
+
+    def move_processed_files(self):
+        self.move_files(self.processed_files, 'Processed')
+        # for full_filepath in self.processed_files:
+        #     # Move file to the "Processed" folder
+        #     target_file = full_filepath.replace(os.sep + 'ToProcess' + os.sep, os.sep + 'Processed' + os.sep)
+        #
+        #     # Create directory, if needed
+        #     target_dir = os.path.dirname(target_file)
+        #     try:
+        #         os.makedirs(name=target_dir, exist_ok=True)
+        #     except OSError as exc:
+        #         logging.error('Error creating ' + target_dir + ': ' + exc.strerror)
+        #         continue
+        #         # raise
+        #
+        #     try:
+        #         os.replace(full_filepath, target_file)
+        #     except (OSError, IOError) as exc:
+        #         logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
+        #         continue
+        #         # raise
+        #     # logging.info("Processed file: " + full_filepath)
 
         self.processed_files.clear()
 
