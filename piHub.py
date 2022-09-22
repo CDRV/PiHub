@@ -87,7 +87,7 @@ if __name__ == '__main__':
         servers.append(folderWatcher_server)
 
     logging.info("PiHub " + version_string + " started.")
-    
+
     try:
         # Main loop on main thread
         while True:
