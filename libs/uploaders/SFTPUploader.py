@@ -40,6 +40,23 @@ class SFTPUploader:
                     if not (s.isdir(file_server_location)):
                         s.mkdir(file_server_location)
                     with s.cd(file_server_location):
+                        file_name = os.path.basename(file_to_transfer)
+                        # Query file size from server and compare to local file size
+                        try:
+                            remote_attr = s.stat(remotepath=file_server_location + '/' + file_name)
+                            remote_size = remote_attr.st_size
+                            local_attr = os.stat(file_to_transfer)
+                            local_size = local_attr.st_size
+                            if local_size == remote_size:
+                                # Same size on server as local file, skip!
+                                logging.info('Skipping ' + file_to_transfer + ': already present on server.')
+                                if file_transferred_callback:
+                                    file_transferred_callback(file_to_transfer)
+                                continue
+                        except IOError:
+                            # File not on server = ok, continue!
+                            pass
+                        # TODO: Use pysftp.Connection.stat() to find file size and only send if is different
                         s.put(localpath=file_to_transfer, preserve_mtime=True,
                               callback=lambda current, total:
                               SFTPUploader.file_upload_progress(current, total, file_to_transfer,

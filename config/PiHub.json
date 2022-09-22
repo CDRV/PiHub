@@ -1,9 +1,9 @@
 {
   "General": {
-    "enable_logging": false,
+    "enable_logging": true,
     "enable_bed_server": false,
-    "enable_watch_server": false,
-    "enable_folderWatcher_server": true,
+    "enable_watch_server": true,
+    "enable_folderWatcher_server": false,
     "logs_path": "logs"
   },
   "WatchServer": {
@@ -13,7 +13,8 @@
     "sftp_transfer": true,
     "opentera_transfer": false,
     "server_base_folder": "Watch",
-    "send_logs_only": false
+    "send_logs_only": false,
+    "minimal_dataset_duration": 10
   },
   "BedServer": {
     "hostname": "0.0.0.0",
@@ -29,10 +30,10 @@
     "sensor_ID": "Sensor_0"
   },
   "SFTP": {
-    "hostname": "telesante.cdrv.ca",
+    "hostname": "",
     "port": 40091,
     "username": "dev",
-    "password": "tr3cr100"
+    "password": ""
   },
   "OpenTera": {
     "hostname": "localhost",
