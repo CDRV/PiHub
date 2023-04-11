@@ -68,7 +68,7 @@ class FolderWatcher(BaseServer):
                     for i in range(0, len(added)):
                         filename = self.data_path + '/local_only/' + self.sensor_ID + "/" + added[i]
                         # Send file using SFTP
-                        file_server_directory = "/" + self.server_base_folder + "/" + self.sensor_ID
+                        file_server_directory = self.server_base_folder + "/" + self.sensor_ID
                         file_server_path = file_server_directory + "/" + added[i]  #
                         temp_file = self.data_path + "/local_only/" + self.sensor_ID + "/tempData.txt"
                         file_transferred_directory = self.data_path + "/transferred/" + self.sensor_ID
