@@ -38,7 +38,8 @@ class SFTPUploader:
                                    cnopts=cnopts) as s:
                 for file_server_location, file_to_transfer in zip(files_directory_on_server, files_to_transfer):
                     if not (s.isdir(file_server_location)):
-                        s.mkdir(file_server_location)
+                        s.makedirs(file_server_location)
+                        # s.mkdir(file_server_location)
                     with s.cd(file_server_location):
                         file_name = os.path.basename(file_to_transfer)
                         # Query file size from server and compare to local file size
