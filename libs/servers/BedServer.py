@@ -141,7 +141,7 @@ class BedServerRequestHandler(socketserver.StreamRequestHandler):
         file.close()
 
         # Send file using SFTP
-        file_server_directory = "/" + self.server_base_folder + "/" + str(greetings)
+        file_server_directory = self.server_base_folder + "/" + str(greetings)
         file_server_path = file_server_directory + "/" + str(datetime.now().date()) + ".txt"
         temp_file = self.data_path + "/local_only/" + str(greetings) + "/tempData.txt"
         file_transferred_directory = self.data_path + "/transferred/" + str(greetings)
