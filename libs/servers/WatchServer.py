@@ -108,13 +108,13 @@ class WatchServer(BaseServer):
                 files.extend(folder_files)
                 full_files.extend([os.path.join(dp, file) for file in folder_files])
                 file_folder = dp.replace(base_folder, '')
-                file_folders.extend("/" + self.server_base_folder + "/" + file_folder.replace(os.sep, '/')
+                file_folders.extend(self.server_base_folder + "/" + file_folder.replace(os.sep, '/')
                                     for _ in folder_files)
 
         # Filter duplicates
         # full_files = list(set(full_files))
 
-        if files:
+        if full_files:
             logging.info('About to sync files...')
 
             if self.sftp_transfer:
