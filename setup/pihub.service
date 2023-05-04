@@ -4,6 +4,7 @@ Description=PiHub
 After=network-online.target
 
 [Service]
+ExecStartPre=/bin/sleep 10
 ExecStart=/home/pi/Desktop/PiHub/venv/bin/python3 /home/pi/Desktop/PiHub/piHub.py
 WorkingDirectory=/home/pi/Desktop/PiHub
 StandardOutput=syslog+console
