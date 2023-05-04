@@ -231,7 +231,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             return
 
         # Stop timer to send data, since we received new data
-        if self.base_server.file_syncher_timer.is_alive():
+        if self.base_server.file_syncher_timer and self.base_server.file_syncher_timer.is_alive():
             self.base_server.file_syncher_timer.cancel()
             self.base_server.file_syncher_timer = None
 
