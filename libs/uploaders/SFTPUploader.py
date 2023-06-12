@@ -68,10 +68,13 @@ class SFTPUploader:
         except (pysftp.exceptions.ConnectionException, pysftp.CredentialException,
                 pysftp.AuthenticationException, pysftp.HostKeysException,
                 paramiko.SSHException, paramiko.PasswordRequiredException) as exc:
+            err_msg = str(exc)
+            if exc.message:
+                err_msg = exc.message + ' ' + err_msg
             if file_to_transfer:
-                logging.error('Error occurred transferring ' + file_to_transfer + ': ' + str(exc))
+                logging.error('Error occurred transferring ' + file_to_transfer + ': ' + err_msg)
             else:
-                logging.error('Error occured while trying to transfer: ' + str(exc))
+                logging.error('Error occured while trying to transfer: ' + err_msg)
             return False
 
         logging.info('Files transfer complete!')
