@@ -37,7 +37,7 @@ class WatchServer(BaseServer):
         logging.info('Apple Watch Server starting...')
 
         # Check if all files are on sync on the server
-        self.sync_files(check_internet=False)  # Don't explicitely check internet connection on startup
+        # self.sync_files(check_internet=False)  # Don't explicitely check internet connection on startup
 
         request_handler = AppleWatchRequestHandler
         request_handler.base_server = self
@@ -47,6 +47,11 @@ class WatchServer(BaseServer):
         self.is_running = True
         logging.info('Apple Watch Server started on port ' + str(self.port))
 
+        # Check if all files are on sync on the server (after the main server has started)
+        self.file_syncher_timer = threading.Timer(1, self.sync_files, [False])
+        self.file_syncher_timer.start()
+
+        # Thread will wait here
         self.server.serve_forever()
         self.server.server_close()
 
@@ -61,7 +66,6 @@ class WatchServer(BaseServer):
 
     def sync_files(self, check_internet: bool = True):
         logging.info("WatchServer: Synchronizing files with server...")
-
         if self.synching_files:
             logging.info("*** WatchServer: Already synching files. Will wait for next time.")
             return
@@ -69,6 +73,7 @@ class WatchServer(BaseServer):
         self.synching_files = True
         # Build list of files to transfer
         base_folder = self.data_path + '/ToProcess/'
+        base_folder = base_folder.replace('/', os.sep)
         files = []
         full_files = []
         file_folders = []
@@ -128,6 +133,11 @@ class WatchServer(BaseServer):
                 # Set files as processed
                 if success:
                     self.move_processed_files()
+                else:
+                    # Something occurred... Try again in 5 minutes
+                    self.file_syncher_timer = threading.Timer(300, self.sync_files)
+                    self.file_syncher_timer.start()
+
             # for file in full_files:
             #     WatchServer.file_was_processed(file)
         else:
@@ -156,7 +166,7 @@ class WatchServer(BaseServer):
                 # raise
 
             try:
-                os.replace(full_filepath, target_file)
+                os.rename(full_filepath, target_file)
             except (OSError, IOError) as exc:
                 logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
                 continue
@@ -235,6 +245,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.base_server.file_syncher_timer.cancel()
             self.base_server.file_syncher_timer = None
 
+        # Prepare to receive data
         destination_dir = (self.base_server.data_path + '/ToProcess/' + device_name + '/' + file_path + '/')\
             .replace('//', '/').replace('/', os.sep)
         destination_path = destination_dir + file_name
@@ -290,7 +301,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
                 else:
                     fh.write(data)
                 content_size_remaining -= buffer_size
-                content_received = (content_length - content_size_remaining)
+                # content_received = (content_length - content_size_remaining)
                 # pc = math.floor((content_received / content_length) * 100)
                 # if pc != last_pc:
                 #     self.streamer.update_progress.emit(file_name, " (" + str(content_received) + "/ " +
@@ -315,6 +326,17 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             error = "Transfer error: " + str(file_infos.st_size) + " bytes received, " + str(content_length) + \
                     " expected."
             logging.error(device_name + " - " + file_name + " - " + error)
+            self.send_response(400)
+            self.send_header('Content-type', 'file-transfer/error')
+            self.end_headers()
+            return
+
+        if content_length == 0 or (file_infos.st_size == 0 and content_length != 0):
+            error = "Transfer error: 0 byte received."
+            logging.error(device_name + " - " + file_name + " - " + error)
+            self.send_response(400)
+            self.send_header('Content-type', 'file-transfer/error')
+            self.end_headers()
             return
 
         # All is good!
