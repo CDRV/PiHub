@@ -37,7 +37,7 @@ class WatchServer(BaseServer):
         logging.info('Apple Watch Server starting...')
 
         # Check if all files are on sync on the server
-        self.sync_files(check_internet=False)  # Don't explicitely check internet connection on startup
+        # self.sync_files(check_internet=False)  # Don't explicitely check internet connection on startup
 
         request_handler = AppleWatchRequestHandler
         request_handler.base_server = self
@@ -47,6 +47,11 @@ class WatchServer(BaseServer):
         self.is_running = True
         logging.info('Apple Watch Server started on port ' + str(self.port))
 
+        # Check if all files are on sync on the server (after the main server has started)
+        self.file_syncher_timer = threading.Timer(1, self.sync_files, [False])
+        self.file_syncher_timer.start()
+
+        # Thread will wait here
         self.server.serve_forever()
         self.server.server_close()
 
@@ -61,7 +66,6 @@ class WatchServer(BaseServer):
 
     def sync_files(self, check_internet: bool = True):
         logging.info("WatchServer: Synchronizing files with server...")
-
         if self.synching_files:
             logging.info("*** WatchServer: Already synching files. Will wait for next time.")
             return
