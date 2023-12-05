@@ -69,6 +69,7 @@ class WatchServer(BaseServer):
         self.synching_files = True
         # Build list of files to transfer
         base_folder = self.data_path + '/ToProcess/'
+        base_folder = base_folder.replace('/', os.sep)
         files = []
         full_files = []
         file_folders = []
