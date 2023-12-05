@@ -133,6 +133,11 @@ class WatchServer(BaseServer):
                 # Set files as processed
                 if success:
                     self.move_processed_files()
+                else:
+                    # Something occurred... Try again in 5 minutes
+                    self.file_syncher_timer = threading.Timer(300, self.sync_files)
+                    self.file_syncher_timer.start()
+
             # for file in full_files:
             #     WatchServer.file_was_processed(file)
         else:
