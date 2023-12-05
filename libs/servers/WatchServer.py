@@ -161,7 +161,7 @@ class WatchServer(BaseServer):
                 # raise
 
             try:
-                os.replace(full_filepath, target_file)
+                os.rename(full_filepath, target_file)
             except (OSError, IOError) as exc:
                 logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
                 continue
@@ -240,6 +240,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.base_server.file_syncher_timer.cancel()
             self.base_server.file_syncher_timer = None
 
+        # Prepare to receive data
         destination_dir = (self.base_server.data_path + '/ToProcess/' + device_name + '/' + file_path + '/')\
             .replace('//', '/').replace('/', os.sep)
         destination_path = destination_dir + file_name
@@ -295,7 +296,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
                 else:
                     fh.write(data)
                 content_size_remaining -= buffer_size
-                content_received = (content_length - content_size_remaining)
+                # content_received = (content_length - content_size_remaining)
                 # pc = math.floor((content_received / content_length) * 100)
                 # if pc != last_pc:
                 #     self.streamer.update_progress.emit(file_name, " (" + str(content_received) + "/ " +
@@ -320,6 +321,17 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             error = "Transfer error: " + str(file_infos.st_size) + " bytes received, " + str(content_length) + \
                     " expected."
             logging.error(device_name + " - " + file_name + " - " + error)
+            self.send_response(400)
+            self.send_header('Content-type', 'file-transfer/error')
+            self.end_headers()
+            return
+
+        if content_length == 0:
+            error = "Transfer error: 0 byte received."
+            logging.error(device_name + " - " + file_name + " - " + error)
+            self.send_response(400)
+            self.send_header('Content-type', 'file-transfer/error')
+            self.end_headers()
             return
 
         # All is good!
