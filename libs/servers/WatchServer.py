@@ -326,7 +326,7 @@ class AppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
 
-        if content_length == 0:
+        if content_length == 0 or (file_infos.st_size == 0 and content_length != 0):
             error = "Transfer error: 0 byte received."
             logging.error(device_name + " - " + file_name + " - " + error)
             self.send_response(400)
