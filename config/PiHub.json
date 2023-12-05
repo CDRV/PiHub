@@ -30,10 +30,10 @@
     "sensor_ID": "Sensor_0"
   },
   "SFTP": {
-    "hostname": "",
+    "hostname": "telesante.cdrv.ca",
     "port": 40091,
-    "username": "dev",
-    "password": ""
+    "username": "sftp_dev",
+    "password": "LS9PwJx7$829so"
   },
   "OpenTera": {
     "hostname": "localhost",

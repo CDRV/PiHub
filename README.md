@@ -15,7 +15,7 @@ Main features of the project includes:
       * OpenTera (https://github.com/introlab/opentera) server
 
 ## Requirements
-Tested on Python 3.7 and 3.8
+Tested on Python 3.10
 
 ## Pi setup
 
@@ -29,6 +29,7 @@ Initialize credential manager (to remember PAT) `git config --global credential.
      3. `source venv/bin/activate`
      4. `pip install -r requirements.txt`
      5. `deactivate`
+	 * **If miniconda is installed, the script "create_conda_venv" can also be used**
   4. Edit the config file `/home/pi/Desktop/PiHub/config/PiHub.json` with the appropriate values
   5. Setup the cron tasks using `sudo crontab -e` and the crontab job listed in the `/home/pi/Desktop/PiHub/setup/crontab.txt` file
   6. Setup and enable the main pihub service using<br>
@@ -50,6 +51,7 @@ If not developping directly on a Raspberry Pi, a virtual Python environment (ven
   3. Create the virtual environment: `python -m venv venv`
   4. Enable the virtual environment: <br>
      On Mac/Linux: `source venv/bin/activate`<br>
-     On Windows: `venv\Scripts\activate.bat`
+     On Windows: `venv\Scripts\activate.bat`<br>
+	 **If miniconda is installed, the script "create_conda_venv" can also be used**
   5. Install requirements: `pip install -r requirements.txt`
 

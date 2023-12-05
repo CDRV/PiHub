@@ -37,7 +37,8 @@ class PiHubHardware:
                 logging.warning('Reboot completed, but still no Internet... Rebooting...')
                 # Still no internet connection - reboot the pi!
                 PiHubHardware.reboot()
-            logging.info('Internet is back. All is fine.')
+            else:
+                logging.info('Internet is back. All is fine.')
 
         lock.release()
 
