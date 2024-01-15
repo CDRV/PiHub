@@ -1,5 +1,7 @@
-# PiHub
+# PiHub (Qt Version)
 Multi-network (cellular, wi-fi &amp; ethernet) sensor and data hub with local repository and remote transfer on SFTP / opentera server
+
+
 
 ## Description
 This project was designed to run on a Raspberry Pi board with a cellular hat (Waveshare SIM7600CE 4G HAT - https://www.waveshare.com/product/raspberry-pi/hats/iot/sim7600ce-4g-hat.htm).
