@@ -1,3 +1,6 @@
+#CMake / Qt
+CMakeLists.txt.user
+
 # Prerequisites
 *.d
 
