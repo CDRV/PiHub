@@ -13,3 +13,4 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core LinguistTools)
 
 add_subdirectory(submodules)
+add_subdirectory(src)
