@@ -11,7 +11,7 @@ set(PiHubApp_srcs
 )
 
 #This will generate moc_* for Qt
-qt_wrap_cpp(PiHubAppn_moc_srcs ${PiHubApp_includes})
+qt_wrap_cpp(PiHubApp_moc_srcs ${PiHubApp_includes})
 
 
 add_executable(PiHubApp ${PiHubApp_includes} ${PiHubApp_srcs} ${PiHubApp_moc_srcs})
