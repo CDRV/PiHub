@@ -1,0 +1,3 @@
+[submodule "opentera-libraries"]
+	path = submodules/opentera-libraries
+	url = git@github.com:introlab/opentera-libraries.git
