@@ -1,16 +1,12 @@
-##################################################
-# PiHub project main script
-##################################################
-# Authors: Simon Brière, Eng. MASc.
-#          Mathieu Hamel, Eng. MASc.
-##################################################
 import time
 import logging
 import sys
+import os
 
 from libs.config.ConfigManager import ConfigManager
 from libs.servers.BedServer import BedServer
-from libs.servers.WatchServer import WatchServer
+from libs.servers.WatchServerSFTP import WatchServerSFTP
+from libs.servers.WatchServerOpenTera import WatchServerOpenTera
 from libs.servers.folderWatcher import FolderWatcher
 from libs.hardware.PiHubHardware import PiHubHardware
 
@@ -40,7 +36,13 @@ if __name__ == '__main__':
 
     # Load config file
     logging.info("Starting up PiHub v" + version_string + "...")
-    if not config_man.load_config('config/PiHub.json'):
+    config_file = 'config/PiHub_Defaults.json'
+    if os.path.isfile('config/PiHub.json'):
+        config_file = 'config/PiHub.json'
+    else:
+        logging.warning('No specific config file - using default config!')
+    logging.info('Using config file: ' + config_file)
+    if not config_man.load_config(config_file):
         logging.critical("Invalid config - system halted.")
         exit(1)
 
@@ -69,12 +71,20 @@ if __name__ == '__main__':
     # Apple Watch server
     if config_man.general_config["enable_watch_server"]:
         # Start Apple Watch server
-        watch_server = WatchServer(server_config=config_man.watch_server_config,
-                                   sftp_config=config_man.sftp_config)
-
-        # Start server
-        watch_server.start()
-        servers.append(watch_server)
+        watch_server = None
+        if config_man.watch_server_config['transfer_type'] == 'sftp':
+            watch_server = WatchServerSFTP(server_config=config_man.watch_server_config,
+                                           sftp_config=config_man.sftp_config)
+        if config_man.watch_server_config['transfer_type'] == 'opentera':
+            watch_server = WatchServerOpenTera(server_config=config_man.watch_server_config,
+                                               opentera_config=config_man.opentera_config)
+        if not watch_server:
+            logging.critical('Unknown Watch Server Transfer type "' + config_man.watch_server_config['transfer_type']
+                             + '" - will not start server')
+        else:
+            # Start server
+            watch_server.start()
+            servers.append(watch_server)
 
     # Folder Watcher server
     if config_man.general_config["enable_folderWatcher_server"]:

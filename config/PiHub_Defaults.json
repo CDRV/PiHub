@@ -10,8 +10,7 @@
     "hostname": "0.0.0.0",
     "port": 8118,
     "data_path": "data/watch",
-    "sftp_transfer": true,
-    "opentera_transfer": false,
+    "transfer_type": "opentera",
     "server_base_folder": "Watch",
     "send_logs_only": false,
     "minimal_dataset_duration": 10
@@ -30,13 +29,13 @@
     "sensor_ID": "Sensor_0"
   },
   "SFTP": {
-    "hostname": "telesante.cdrv.ca",
-    "port": 40091,
-    "username": "sftp_dev",
-    "password": "LS9PwJx7$829so"
+    "hostname": "127.0.0.1",
+    "port": 22,
+    "username": "sftp",
+    "password": "sftp"
   },
   "OpenTera": {
-    "hostname": "localhost",
+    "hostname": "127.0.0.1",
     "port": 40075
   }
 }

@@ -41,8 +41,9 @@ class ConfigManager:
             self.opentera_config = config_json["OpenTera"]
 
         if self.validate_config("WatchServer", config_json['WatchServer'], ['hostname', 'port', 'data_path',
-                                                                            'sftp_transfer', 'opentera_transfer',
-                                                                            'server_base_folder', 'send_logs_only']):
+                                                                            'transfer_type', 'server_base_folder',
+                                                                            'send_logs_only', 'minimal_dataset_duration'
+                                                                            ]):
             self.watch_server_config = config_json["WatchServer"]
 
         if self.validate_config("BedServer", config_json['BedServer'], ['hostname', 'port', 'data_path',
