@@ -38,8 +38,11 @@ class WatchServerBase(BaseServer):
             self.server.shutdown()
             self.server.server_close()
 
-    def new_file_received(self, filename: str):
-        logging.error(self.__class__.__name__ + ' - unhandled new file received')
+    def new_file_received(self, device_name: str, filename: str):
+        logging.debug(self.__class__.__name__ + ' - unhandled new file received')
+
+    def device_disconnected(self, device_name: str):
+        logging.debug(self.__class__.__name__ + ' - unhandled device disconnected')
 
     @staticmethod
     def move_files(source_files, target_folder):
@@ -62,6 +65,14 @@ class WatchServerBase(BaseServer):
                 logging.error('Error moving ' + full_filepath + ' to ' + target_file + ': ' + exc.strerror)
                 continue
                 # raise
+
+    @staticmethod
+    def move_folder(source_folder, target_folder):
+        import shutil
+        try:
+            shutil.move(source_folder, target_folder)
+        except shutil.Error as exc:
+            logging.critical('Error moving ' + source_folder + ' to ' + target_folder + ': ' + exc.strerror)
 
     def file_was_processed(self, full_filepath: str):
         # Mark file as processed - will be moved later on to prevent conflicts

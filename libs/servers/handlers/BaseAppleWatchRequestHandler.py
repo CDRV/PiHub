@@ -29,7 +29,7 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Content-type', 'cdrv-cmd/Disconnect')
             self.end_headers()
-            # self.base_server.sync_files()
+            self.base_server.device_disconnected(self.headers['Device-Name'])
             return
 
         self.send_response(200)
@@ -162,4 +162,4 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
 
         # Signal base server that we got new files
         if self.base_server:
-            self.base_server.new_file_received(file_name)
+            self.base_server.new_file_received(device_name, file_name)

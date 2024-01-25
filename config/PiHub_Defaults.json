@@ -36,6 +36,7 @@
   },
   "OpenTera": {
     "hostname": "127.0.0.1",
-    "port": 40075
+    "port": 40075,
+	"device_register_key": "1234567890"
   }
 }

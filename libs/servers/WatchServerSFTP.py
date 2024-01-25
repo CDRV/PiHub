@@ -115,7 +115,7 @@ class WatchServerSFTP(WatchServerBase):
         logging.info("WatchServerSFTP: Synchronization done.")
         self.synching_files = False
 
-    def new_file_received(self, filename: str):
+    def new_file_received(self, device_name: str, filename: str):
         # Start timer to batch transfer files in 20 seconds
         self.file_syncher_timer = threading.Timer(20, self.sync_files)
         self.file_syncher_timer.start()
