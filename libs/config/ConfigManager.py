@@ -37,8 +37,8 @@ class ConfigManager:
         if self.validate_config("SFTP", config_json['SFTP'], ['hostname', 'port', 'username', 'password']):
             self.sftp_config = config_json["SFTP"]
 
-        if self.validate_config("OpenTera", config_json['OpenTera'], ['hostname', 'port',
-                                                                      'device_register_key']):
+        if self.validate_config("OpenTera", config_json['OpenTera'],
+                                ['hostname', 'port', 'device_register_key', 'default_session_type_id']):
             self.opentera_config = config_json["OpenTera"]
 
         if self.validate_config("WatchServer", config_json['WatchServer'], ['hostname', 'port', 'data_path',

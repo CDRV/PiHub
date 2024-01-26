@@ -12,6 +12,7 @@ import threading
 class WatchServerSFTP(WatchServerBase):
 
     server = None
+    file_syncher_timer = None
 
     def __init__(self, server_config: dict, sftp_config: dict):
 
@@ -24,7 +25,7 @@ class WatchServerSFTP(WatchServerBase):
         self.synching_files = False
 
         # Set file synching after a few seconds without receiving any data
-        self.file_syncher_timer = threading.Timer(20, self.sync_files)
+        # self.file_syncher_timer = threading.Timer(20, self.sync_files)
 
     def run(self):
         # Check if all files are on sync on the server (after the main server has started)
