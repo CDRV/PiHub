@@ -2,8 +2,11 @@ from libs.servers.WatchServerBase import WatchServerBase
 from libs.servers.handlers.OpenTeraAppleWatchRequestHandler import OpenTeraAppleWatchRequestHandler
 
 from opentera_libraries.device.DeviceComManager import DeviceComManager
+from opentera_libraries.common.Constants import SessionStatus, SessionEventTypes, SessionCategoryEnum
+
 import opentera_libraries.device.DeviceAPI as DeviceAPI
 from cryptography.fernet import Fernet
+from pathlib import Path
 
 import logging
 import os
@@ -140,9 +143,10 @@ class WatchServerOpenTera(WatchServerBase):
 
         # Find correct session type to use
         possible_session_types_ids = [st['id_session_type'] for st in session_types_infos
-                                      if st['session_type_category'] == 2]  # Filter data collect session types
+                                      if st['session_type_category'] == SessionCategoryEnum.DATACOLLECT.value]
         if len(possible_session_types_ids) == 0:
-            logging.error('No session types available to this device - will not transfer until this is fixed.')
+            logging.error('No "Data Collect" session types available to this device - will not transfer until this is '
+                          'fixed.')
             return
 
         id_session_type = self.opentera_config['default_session_type_id']
@@ -196,21 +200,23 @@ class WatchServerOpenTera(WatchServerBase):
             session_params = session_params.replace('\n', '').replace('\t', '').replace(',,', ',').replace('{,', '{'). \
                 replace(' ', '').replace(',}', '}')
 
-            session_comments = 'Created by ' + device_name + ', v' + session_data_json['appVersion']
+            session_comments = 'Created by ' + device_name + ', SensorLogger v' + session_data_json['appVersion']
 
             # Create session
             if 'timestamp' in session_data_json:
-                session_name = session_data_json['timestamp']
-                session_starttime = datetime.datetime.fromisoformat(session_data_json['timestamp'].replace('_', ' ')).isoformat()
+                session_starttime = datetime.datetime.fromisoformat(session_data_json['timestamp'].replace('_', ' '))
             else:
                 logging.warning('No session timestamp found - using current time')
-                session_name = device_name
-                session_starttime = datetime.datetime.isoformat()
+                session_starttime = datetime.datetime.now()
 
-            session_info = {'id_session': 0, 'session_name': session_name, 'session_start_datetime': session_starttime,
-                            'session_duration': int(duration), 'session_status': 2,  # Completed
+            session_name = device_name + ' (PiHub) ' + session_starttime.strftime("%Y-%m-%d")
+
+            session_info = {'id_session': 0, 'session_name': session_name,
+                            'session_start_datetime': session_starttime.isoformat(),
+                            'session_duration': int(duration), 'session_status': SessionStatus.STATUS_COMPLETED.value,
                             'session_parameters': session_params, 'session_comments': session_comments,
-                            'id_session_type': id_session_type}
+                            'id_session_type': id_session_type,
+                            'session_participants': [part['participant_uuid'] for part in participants_infos]}
 
             response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSIONS, {'session': session_info})
             if response.status_code != 200:
@@ -218,6 +224,77 @@ class WatchServerOpenTera(WatchServerBase):
                               ' - ' + response.text.strip())
                 continue
 
+            id_session = response.json()['id_session']
+
             # Create session events
+            session_events = self.watch_logs_to_events(logs_data)
+            for event in session_events:
+                event['id_session'] = id_session
+                event['id_session_event'] = 0
+                response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSION_EVENTS, {'session_event': event})
+                if response.status_code != 200:
+                    logging.error('OpenTera: Unable to create session event - skipping: ' + str(response.status_code) +
+                                  ' - ' + response.text.strip())
+                    continue
 
             # Upload all files to FileTransfer service
+            for data_file in files:
+                full_path = str(os.path.join(dir_path, data_file))
+                logging.info('Uploading ' + full_path + '...')
+                response = device_com.upload_file(id_session=id_session, asset_name=data_file, file_path=full_path)
+                if response.status_code != 200:
+                    logging.error('OpenTera: Unable to upload file - skipping: ' + str(response.status_code) +
+                                  ' - ' + response.text.strip())
+                    continue
+
+            # All done for that folder - move to processed folder after a small delay to allow uploaded files to
+            # properly close
+            threading.Timer(interval=1, function=self.move_folder,
+                            kwargs={'source_folder': dir_path,
+                                    'target_folder': dir_path.replace('ToProcess', 'Rejected')}).start()
+
+    @staticmethod
+    def watch_logs_to_events(logs: list) -> list:
+        # Parse the watch logs to TeraSession events - {event_type, event_datetime, event_text, event_context}
+
+        # Create mapping between logger event and TeraSessionEvents
+        events_map = {
+            0: SessionEventTypes.GENERAL_ERROR.value,
+            1: SessionEventTypes.GENERAL_INFO.value,
+            2: SessionEventTypes.GENERAL_WARNING.value,
+            3: SessionEventTypes.SESSION_START.value,
+            4: SessionEventTypes.SESSION_STOP.value,
+            5: SessionEventTypes.DEVICE_ON_CHARGE.value,
+            6: SessionEventTypes.DEVICE_OFF_CHARGE.value,
+            7: SessionEventTypes.DEVICE_LOW_BATT.value,
+            8: SessionEventTypes.DEVICE_STORAGE_LOW.value,
+            9: SessionEventTypes.DEVICE_STORAGE_FULL.value,
+            10: SessionEventTypes.DEVICE_EVENT.value,
+            11: SessionEventTypes.USER_EVENT.value
+        }
+
+        # Process the logs
+        events = []
+        for log in logs:
+            log_data = log.split('\t')
+            # 0 = UNIX Timestamp, 1 = EventType, 2 = Context, 3 = Time string, 4 = Text
+            if len(log_data) != 5:
+                logging.warning('Watch Log entry is not in a known format - ignoring.')
+                continue
+
+            log_time = datetime.datetime.fromtimestamp(float(log_data[0]))
+            if int(log_data[1]) in events_map:
+                log_type = events_map[int(log_data[1])]
+            else:
+                logging.warning('Watch log event type ' + log_data[1] + ' not directly mapped to a '
+                                                                        'TeraSessionEvent - using DeviceEvent.')
+                log_type = SessionEventTypes.DEVICE_EVENT.value
+            session_event = {
+                'id_session_event_type': log_type,
+                'session_event_datetime': log_time.isoformat(),
+                'session_event_text': log_data[4],
+                'session_event_context': log_data[2]
+            }
+            events.append(session_event)
+
+        return events
