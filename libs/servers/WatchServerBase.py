@@ -70,9 +70,14 @@ class WatchServerBase(BaseServer):
     def move_folder(source_folder, target_folder):
         import shutil
         try:
+            if os.path.exists(target_folder):
+                shutil.rmtree(target_folder)
             shutil.move(source_folder, target_folder)
         except shutil.Error as exc:
-            logging.critical('Error moving ' + source_folder + ' to ' + target_folder + ': ' + exc.strerror)
+            error = exc.strerror
+            if not error:
+                error = 'Unknown error'
+            logging.critical('Error moving ' + source_folder + ' to ' + target_folder + ': ' + error)
 
     def file_was_processed(self, full_filepath: str):
         # Mark file as processed - will be moved later on to prevent conflicts
