@@ -102,8 +102,9 @@ class WatchServerOpenTera(WatchServerBase):
         logging.info("WatchServerOpenTera: Checking if any pending transfers...")
         # Get base folder path
         base_folder = os.path.join(self.data_path, 'ToProcess')
-        for device_name in os.listdir(base_folder):
-            self.initiate_opentera_transfer(device_name)
+        if os.path.isdir(base_folder):
+            for device_name in os.listdir(base_folder):
+                self.initiate_opentera_transfer(device_name)
 
         logging.info("All done!")
 
