@@ -41,7 +41,7 @@ class OpenTeraAppleWatchRequestHandler(BaseAppleWatchRequestHandler):
                     # Save token for future use!
                     self.base_server.update_device_token(device_name, response.json()['device_token'])
                 else:
-                    logging.warning("Register failed.")
+                    logging.warning("Register failed: " + str(response.status_code) + " - " + response.reason)
                 self.forward_opentera_response(response)
             else:
                 response = requests.get(url=self.base_server.opentera_server_url + query_path, params=query_params,
