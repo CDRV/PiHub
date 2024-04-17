@@ -110,7 +110,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def initiate_opentera_transfer(self, device_name: str):
         # Only one thread can transfer at a time - this prevent file conflicts
-        with opentera_lock:
+        with (opentera_lock):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
 
             if device_name in self._device_timeouts:
@@ -215,7 +215,10 @@ class WatchServerOpenTera(WatchServerBase):
                     logging.warning('No session timestamp found - using current time')
                     session_starttime = datetime.datetime.now()
 
-                session_name = device_name + ' (PiHub) ' + session_starttime.strftime("%Y-%m-%d")
+                session_name = device_name
+                if 'device_subtype' in device_infos:
+                    session_name += ' [' + device_infos['device_subtype'] + ']'
+                session_name += ' - ' + session_starttime.strftime("%Y-%m-%d %H:%M:%S")
 
                 session_info = {'id_session': 0, 'session_name': session_name,
                                 'session_start_datetime': session_starttime.isoformat(),
