@@ -1,0 +1,10 @@
+.idea
+/.gitignore
+venv
+logs
+Test
+data
+/__pycache__/*.pyc
+*.pyc
+/config/PiHub.json
+/config/secure_opentera
