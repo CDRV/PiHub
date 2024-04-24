@@ -111,7 +111,7 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
                     return
 
                 if text_format:
-                    fh.write(data.decode())
+                    fh.write(data.decode(errors="ignore"))  # Ignore unknown characters and errors
                 else:
                     fh.write(data)
                 content_size_remaining -= buffer_size

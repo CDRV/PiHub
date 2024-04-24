@@ -237,7 +237,11 @@ class WatchServerOpenTera(WatchServerBase):
 
                 # Create session events
                 session_events = self.watch_logs_to_events(logs_data)
-                for event in session_events:
+                for index, event in enumerate(session_events):
+                    if index >= 100:
+                        logging.warning('OpenTera: More than 100 session events for session ' + session_name +
+                                        ' - ignoring the rest...')
+                        break
                     event['id_session'] = id_session
                     event['id_session_event'] = 0
                     response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSION_EVENTS, {'session_event': event})
