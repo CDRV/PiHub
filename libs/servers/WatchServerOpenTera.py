@@ -95,10 +95,20 @@ class WatchServerOpenTera(WatchServerBase):
                                                              kwargs={'device_name': device_name})
         self._device_timeouts[device_name].start()
 
+    def new_file_received(self, device_name: str, filename: str):
+        # Cancel sync timer on new file
+        if self.file_syncher_timer:
+            self.file_syncher_timer.cancel()
+            self.file_syncher_timer = None
+
     def device_disconnected(self, device_name: str):
-        self.initiate_opentera_transfer(device_name)
+        # self.initiate_opentera_transfer(device_name)
+        # Wait 30 seconds after the last disconnected device to start transfer
+        self.file_syncher_timer = threading.Timer(30, self.sync_files)
+        self.file_syncher_timer.start()
 
     def sync_files(self):
+        self.file_syncher_timer = None
         logging.info("WatchServerOpenTera: Checking if any pending transfers...")
         # Get base folder path
         base_folder = os.path.join(self.data_path, 'ToProcess')

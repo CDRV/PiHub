@@ -88,14 +88,14 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
         # Supported file type?
         if file_type.lower() in ['data', 'dat', 'csv', 'txt', 'oimi']:
 
-            if file_type.lower() in ['data', 'dat']:
-                # Binary file
-                fh = open(destination_path, 'wb')
-                text_format = False
-            else:
-                # Text file
-                fh = open(destination_path, 'w')
-                text_format = True
+            # if file_type.lower() in ['data', 'dat']:
+            # Binary file
+            fh = open(destination_path, 'wb')
+            # text_format = False
+            # else:
+            # Text file
+            # fh = open(destination_path, 'w')
+            # text_format = True
 
             while content_size_remaining > 0:
                 if buffer_size > content_size_remaining:
@@ -110,19 +110,11 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
                                   str(err_desc))
                     return
 
-                if text_format:
-                    fh.write(data.decode(errors="ignore"))  # Ignore unknown characters and errors
-                else:
-                    fh.write(data)
+                # if text_format:
+                #     fh.write(data.decode(errors="ignore"))  # Ignore unknown characters and errors
+                # else:
+                fh.write(data)
                 content_size_remaining -= buffer_size
-                # content_received = (content_length - content_size_remaining)
-                # pc = math.floor((content_received / content_length) * 100)
-                # if pc != last_pc:
-                #     self.streamer.update_progress.emit(file_name, " (" + str(content_received) + "/ " +
-                #                                        str(content_length) + ")", (content_length -
-                #                                                                    content_size_remaining),
-                #                                        content_length)
-                #     last_pc = pc
             fh.close()
         else:
             # self.streamer.add_log.emit(device_name + ": " + file_name + " - Type de fichier non-supporté: " +
