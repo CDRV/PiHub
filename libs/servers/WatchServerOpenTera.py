@@ -13,6 +13,7 @@ import os
 import threading
 import json
 import datetime
+import struct
 
 opentera_lock = Lock()
 
@@ -52,7 +53,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def run(self):
         # Check if all files are on sync on the server (after the main server has started)
-        self.file_syncher_timer = threading.Timer(1, self.sync_files)
+        self.file_syncher_timer = threading.Timer(30, self.sync_files)
         self.file_syncher_timer.start()
 
         super().run()
@@ -91,18 +92,18 @@ class WatchServerOpenTera(WatchServerBase):
             self._device_timeouts[device_name].cancel()
 
         # Starts a timeout timer in case the device doesn't properly disconnect (and thus trigger the transfer)
-        self._device_timeouts[device_name] = threading.Timer(300, self.initiate_opentera_transfer,
+        self._device_timeouts[device_name] = threading.Timer(300, self.device_disconnected,
                                                              kwargs={'device_name': device_name})
         self._device_timeouts[device_name].start()
 
-    def new_file_received(self, device_name: str, filename: str):
         # Cancel sync timer on new file
         if self.file_syncher_timer:
             self.file_syncher_timer.cancel()
             self.file_syncher_timer = None
 
     def device_disconnected(self, device_name: str):
-        # self.initiate_opentera_transfer(device_name)
+        super().device_disconnected(device_name)
+        self.initiate_opentera_transfer(device_name)
         # Wait 30 seconds after the last disconnected device to start transfer
         self.file_syncher_timer = threading.Timer(30, self.sync_files)
         self.file_syncher_timer.start()
@@ -119,6 +120,11 @@ class WatchServerOpenTera(WatchServerBase):
         logging.info("All done!")
 
     def initiate_opentera_transfer(self, device_name: str):
+        if self._connected_devices:
+            logging.info("WatchServerOpenTera: Devices still connected: " + ', '.join(self._connected_devices) +
+                         ' - will transfer later.')
+            return
+
         # Only one thread can transfer at a time - this prevent file conflicts
         with (opentera_lock):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
@@ -187,6 +193,17 @@ class WatchServerOpenTera(WatchServerBase):
 
                 session_data_json = json.loads(session_data)
 
+                # Check if we have all the required files for that session
+                if 'files' in session_data_json:
+                    required_files = session_data_json['files']
+                    current_files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+                    missing_files = set(required_files).difference(current_files)
+                    if missing_files:
+                        # Missing files
+                        logging.error('Missing files in dataset: ' + ', '.join(missing_files) + ' - ignoring dataset '
+                                                                                                'for now')
+                        continue
+
                 # Read watch_logs.txt file
                 log_file = os.path.join(dir_path, 'watch_logs.txt')
                 log_file = log_file.replace('/', os.sep)
@@ -210,6 +227,19 @@ class WatchServerOpenTera(WatchServerBase):
                     logging.info('Rejected folder ' + dir_path + ': dataset too small.')
                     self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
                     continue
+
+                # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
+                # if watch battery was depleted
+                battery_file = os.path.join(dir_path, 'watch_Battery.data')
+                battery_file = battery_file.replace('/', os.sep)
+                if os.path.isfile(battery_file):
+                    with open(battery_file, mode='rb') as f:
+                        f.seek(-10, os.SEEK_END)
+                        batt_data = f.read(8)  # Read the last timestamp of the file
+                        if len(batt_data) == 8:
+                            batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
+                            if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
+                                duration = batt_last_timestamp - float(first_timestamp)
 
                 # Clean session parameters
                 session_params = session_data_json['description'].split('Settings:')[-1]

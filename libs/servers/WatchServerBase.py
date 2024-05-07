@@ -9,6 +9,7 @@ class WatchServerBase(BaseServer):
     server: ThreadingHTTPServer | None = None
     _request_handler = None
     processed_files = []
+    _connected_devices = []
 
     def __init__(self, server_config: dict, request_handler):
         super().__init__(server_config=server_config)
@@ -42,7 +43,13 @@ class WatchServerBase(BaseServer):
         logging.debug(self.__class__.__name__ + ' - unhandled new file received')
 
     def device_disconnected(self, device_name: str):
-        logging.debug(self.__class__.__name__ + ' - unhandled device disconnected')
+        # logging.debug(self.__class__.__name__ + ' - unhandled device disconnected')
+        if device_name in self._connected_devices:
+            self._connected_devices.remove(device_name)
+
+    def device_connected(self, device_name: str):
+        if device_name not in self._connected_devices:
+            self._connected_devices.append(device_name)
 
     @staticmethod
     def move_files(source_files, target_folder):
