@@ -40,7 +40,9 @@ class WatchServerBase(BaseServer):
             self.server.server_close()
 
     def new_file_received(self, device_name: str, filename: str):
-        logging.debug(self.__class__.__name__ + ' - unhandled new file received')
+        # logging.debug(self.__class__.__name__ + ' - unhandled new file received')
+        if device_name not in self._connected_devices:
+            self._connected_devices.append(device_name)
 
     def device_disconnected(self, device_name: str):
         # logging.debug(self.__class__.__name__ + ' - unhandled device disconnected')

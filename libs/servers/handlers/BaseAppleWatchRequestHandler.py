@@ -136,23 +136,23 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             error = "Transfer error: " + str(file_infos.st_size) + " bytes received, " + str(content_length) + \
                     " expected."
             logging.error(device_name + " - " + file_name + " - " + error)
-            os.remove(destination_path)
             self.send_response(400)
             self.send_header('Content-type', 'file-transfer/error')
             self.end_headers()
+            os.remove(destination_path)
             return
 
         if content_length == 0 or (file_infos.st_size == 0 and content_length != 0):
             error = "Transfer error: 0 byte received."
             logging.error(device_name + " - " + file_name + " - " + error)
-            os.remove(destination_path)
             self.send_response(400)
             self.send_header('Content-type', 'file-transfer/error')
             self.end_headers()
+            os.remove(destination_path)
             return
 
         # All is good!
-        logging.info(device_name + " - " + file_name + ": transfer complete.")
+        logging.info("Completed: " + device_name + " - " + file_name)
 
         self.send_response(200)
         self.send_header('Content-type', 'file-transfer/ack')

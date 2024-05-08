@@ -86,15 +86,16 @@ class WatchServerOpenTera(WatchServerBase):
             self.save_tokens()
 
     def new_file_received(self, device_name: str, filename: str):
+        super().new_file_received(device_name, filename)
         # Start timeout timer in case device doesn't properly disconnect
         if device_name in self._device_timeouts:
             # Stop previous timer
             self._device_timeouts[device_name].cancel()
 
         # Starts a timeout timer in case the device doesn't properly disconnect (and thus trigger the transfer)
-        self._device_timeouts[device_name] = threading.Timer(1200, self.device_disconnected,
-                                                             kwargs={'device_name': device_name})
-        self._device_timeouts[device_name].start()
+        # self._device_timeouts[device_name] = threading.Timer(1200, self.device_disconnected,
+        #                                                      kwargs={'device_name': device_name})
+        # self._device_timeouts[device_name].start()
 
         # Cancel sync timer on new file
         if self.file_syncher_timer:
@@ -103,28 +104,34 @@ class WatchServerOpenTera(WatchServerBase):
 
     def device_disconnected(self, device_name: str):
         super().device_disconnected(device_name)
-        self.initiate_opentera_transfer(device_name)
+        # self.initiate_opentera_transfer(device_name)
         # Wait 30 seconds after the last disconnected device to start transfer
         self.file_syncher_timer = threading.Timer(30, self.sync_files)
         self.file_syncher_timer.start()
 
+    def device_connected(self, device_name: str):
+        super().device_connected(device_name)
+        if self.file_syncher_timer:
+            self.file_syncher_timer.cancel()
+            self.file_syncher_timer = None
+
     def sync_files(self):
         self.file_syncher_timer = None
         logging.info("WatchServerOpenTera: Checking if any pending transfers...")
+        if self._connected_devices:
+            logging.info("WatchServerOpenTera: Devices still connected: " + ', '.join(self._connected_devices) +
+                         ' - will transfer later.')
+            return
+
         # Get base folder path
         base_folder = os.path.join(self.data_path, 'ToProcess')
         if os.path.isdir(base_folder):
             for device_name in os.listdir(base_folder):
                 self.initiate_opentera_transfer(device_name)
 
-        logging.info("All done!")
+        # logging.info("All done!")
 
     def initiate_opentera_transfer(self, device_name: str):
-        if self._connected_devices:
-            logging.info("WatchServerOpenTera: Devices still connected: " + ', '.join(self._connected_devices) +
-                         ' - will transfer later.')
-            return
-
         # Only one thread can transfer at a time - this prevent file conflicts
         with (opentera_lock):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
@@ -239,7 +246,7 @@ class WatchServerOpenTera(WatchServerBase):
                         if len(batt_data) == 8:
                             batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
                             if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
-                                duration = batt_last_timestamp - float(first_timestamp)
+                                duration = float(batt_last_timestamp) - float(first_timestamp)
 
                 # Clean session parameters
                 session_params = session_data_json['description'].split('Settings:')[-1]
