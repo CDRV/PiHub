@@ -55,7 +55,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def run(self):
         # Check if all files are on sync on the server (after the main server has started)
-        self.file_syncher_timer = threading.Timer(3, self.sync_files)
+        self.file_syncher_timer = threading.Timer(30, self.sync_files)
         self.file_syncher_timer.start()
 
         super().run()
@@ -357,7 +357,7 @@ class WatchServerOpenTera(WatchServerBase):
                 return
         # Plan next retry timer
         logging.warning('Errors occured in transfer for ' + device_name + ' - will retry later!')
-        retry_timer = threading.Timer(15, self.initiate_opentera_transfer,
+        retry_timer = threading.Timer(120, self.initiate_opentera_transfer,
                                       kwargs={'device_name': device_name})
         retry_timer.start()
 
