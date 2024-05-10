@@ -343,7 +343,8 @@ class WatchServerOpenTera(WatchServerBase):
             if erronous_paths:
                 self.plan_upload_retry(device_name)
             else:
-                del self._device_retries[device_name]
+                if device_name in self._device_retries:
+                    del self._device_retries[device_name]
 
     def plan_upload_retry(self, device_name):
         if device_name not in self._device_retries.keys():
