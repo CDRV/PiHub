@@ -95,9 +95,9 @@ class WatchServerOpenTera(WatchServerBase):
             self._device_timeouts[device_name].cancel()
 
         # Starts a timeout timer in case the device doesn't properly disconnect (and thus trigger the transfer)
-        # self._device_timeouts[device_name] = threading.Timer(1200, self.device_disconnected,
-        #                                                      kwargs={'device_name': device_name})
-        # self._device_timeouts[device_name].start()
+        self._device_timeouts[device_name] = threading.Timer(1200, self.device_disconnected,
+                                                             kwargs={'device_name': device_name})
+        self._device_timeouts[device_name].start()
 
         # Cancel sync timer on new file
         if self.file_syncher_timer:
