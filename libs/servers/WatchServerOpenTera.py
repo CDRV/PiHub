@@ -234,13 +234,9 @@ class WatchServerOpenTera(WatchServerBase):
                 first_timestamp = logs_data[0].split('\t')[0]
                 last_timestamp = logs_data[-1].split('\t')[0]
                 duration = float(last_timestamp) - float(first_timestamp)
-                if duration <= self.minimal_dataset_duration:
-                    logging.info('Rejected folder ' + dir_path + ': dataset too small.')
-                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
-                    continue
 
                 # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
-                # if watch battery was depleted
+                # if watch battery was depleted or a new day started
                 battery_file = os.path.join(dir_path, 'watch_Battery.data')
                 battery_file = battery_file.replace('/', os.sep)
                 if os.path.isfile(battery_file):
@@ -251,6 +247,11 @@ class WatchServerOpenTera(WatchServerBase):
                             batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
                             if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
                                 duration = float(batt_last_timestamp) - float(first_timestamp)
+
+                if duration <= self.minimal_dataset_duration:
+                    logging.info('Rejected folder ' + dir_path + ': dataset too small.')
+                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                    continue
 
                 # Clean session parameters
                 session_params = session_data_json['description'].split('Settings:')[-1]
