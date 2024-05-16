@@ -21,6 +21,8 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Content-type', 'cdrv-cmd/Connect')
             self.end_headers()
+            if self.base_server:
+                self.base_server.device_connected(self.headers['Device-Name'])
             return
 
         if content_type == 'cdrv-cmd/Disconnect':
@@ -29,7 +31,8 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(202)
             self.send_header('Content-type', 'cdrv-cmd/Disconnect')
             self.end_headers()
-            self.base_server.device_disconnected(self.headers['Device-Name'])
+            if self.base_server:
+                self.base_server.device_disconnected(self.headers['Device-Name'])
             return
 
         self.send_response(200)
@@ -37,7 +40,6 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-
         # Unpack metadata
         content_type = self.headers['Content-Type']
         content_length = int(self.headers['Content-Length'])
@@ -88,14 +90,14 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
         # Supported file type?
         if file_type.lower() in ['data', 'dat', 'csv', 'txt', 'oimi']:
 
-            if file_type.lower() in ['data', 'dat']:
-                # Binary file
-                fh = open(destination_path, 'wb')
-                text_format = False
-            else:
-                # Text file
-                fh = open(destination_path, 'w')
-                text_format = True
+            # if file_type.lower() in ['data', 'dat']:
+            # Binary file
+            fh = open(destination_path, 'wb')
+            # text_format = False
+            # else:
+            # Text file
+            # fh = open(destination_path, 'w')
+            # text_format = True
 
             while content_size_remaining > 0:
                 if buffer_size > content_size_remaining:
@@ -108,21 +110,15 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
                         err_desc = err.args[0]
                     logging.error(device_name + " - Error occured while transferring " + file_name + ": " +
                                   str(err_desc))
+                    fh.close()
+                    os.remove(destination_path)
                     return
 
-                if text_format:
-                    fh.write(data.decode(errors="ignore"))  # Ignore unknown characters and errors
-                else:
-                    fh.write(data)
+                # if text_format:
+                #     fh.write(data.decode(errors="ignore"))  # Ignore unknown characters and errors
+                # else:
+                fh.write(data)
                 content_size_remaining -= buffer_size
-                # content_received = (content_length - content_size_remaining)
-                # pc = math.floor((content_received / content_length) * 100)
-                # if pc != last_pc:
-                #     self.streamer.update_progress.emit(file_name, " (" + str(content_received) + "/ " +
-                #                                        str(content_length) + ")", (content_length -
-                #                                                                    content_size_remaining),
-                #                                        content_length)
-                #     last_pc = pc
             fh.close()
         else:
             # self.streamer.add_log.emit(device_name + ": " + file_name + " - Type de fichier non-supporté: " +
@@ -143,6 +139,7 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(400)
             self.send_header('Content-type', 'file-transfer/error')
             self.end_headers()
+            os.remove(destination_path)
             return
 
         if content_length == 0 or (file_infos.st_size == 0 and content_length != 0):
@@ -151,10 +148,11 @@ class BaseAppleWatchRequestHandler(BaseHTTPRequestHandler):
             self.send_response(400)
             self.send_header('Content-type', 'file-transfer/error')
             self.end_headers()
+            os.remove(destination_path)
             return
 
         # All is good!
-        logging.info(device_name + " - " + file_name + ": transfer complete.")
+        logging.info("Completed: " + device_name + " - " + file_name)
 
         self.send_response(200)
         self.send_header('Content-type', 'file-transfer/ack')

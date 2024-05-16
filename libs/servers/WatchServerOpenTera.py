@@ -13,6 +13,7 @@ import os
 import threading
 import json
 import datetime
+import struct
 
 opentera_lock = Lock()
 
@@ -21,6 +22,8 @@ class WatchServerOpenTera(WatchServerBase):
 
     _device_tokens = {}     # Mapping of devices names and tokens
     _device_timeouts = {}   # Timers of devices, since a watch can "disappear" and not send a "disconnect" command
+
+    _device_retries = {}    # Mapping of device names and number of retries, to automatically try to resend data
 
     file_syncher_timer = None
 
@@ -52,7 +55,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def run(self):
         # Check if all files are on sync on the server (after the main server has started)
-        self.file_syncher_timer = threading.Timer(1, self.sync_files)
+        self.file_syncher_timer = threading.Timer(30, self.sync_files)
         self.file_syncher_timer.start()
 
         super().run()
@@ -85,28 +88,50 @@ class WatchServerOpenTera(WatchServerBase):
             self.save_tokens()
 
     def new_file_received(self, device_name: str, filename: str):
+        super().new_file_received(device_name, filename)
         # Start timeout timer in case device doesn't properly disconnect
         if device_name in self._device_timeouts:
             # Stop previous timer
             self._device_timeouts[device_name].cancel()
 
         # Starts a timeout timer in case the device doesn't properly disconnect (and thus trigger the transfer)
-        self._device_timeouts[device_name] = threading.Timer(300, self.initiate_opentera_transfer,
+        self._device_timeouts[device_name] = threading.Timer(1200, self.device_disconnected,
                                                              kwargs={'device_name': device_name})
         self._device_timeouts[device_name].start()
 
+        # Cancel sync timer on new file
+        if self.file_syncher_timer:
+            self.file_syncher_timer.cancel()
+            self.file_syncher_timer = None
+
     def device_disconnected(self, device_name: str):
-        self.initiate_opentera_transfer(device_name)
+        super().device_disconnected(device_name)
+        # self.initiate_opentera_transfer(device_name)
+        # Wait 30 seconds after the last disconnected device to start transfer
+        self.file_syncher_timer = threading.Timer(30, self.sync_files)
+        self.file_syncher_timer.start()
+
+    def device_connected(self, device_name: str):
+        super().device_connected(device_name)
+        if self.file_syncher_timer:
+            self.file_syncher_timer.cancel()
+            self.file_syncher_timer = None
 
     def sync_files(self):
+        self.file_syncher_timer = None
         logging.info("WatchServerOpenTera: Checking if any pending transfers...")
+        if self._connected_devices:
+            logging.info("WatchServerOpenTera: Devices still connected: " + ', '.join(self._connected_devices) +
+                         ' - will transfer later.')
+            return
+
         # Get base folder path
         base_folder = os.path.join(self.data_path, 'ToProcess')
         if os.path.isdir(base_folder):
             for device_name in os.listdir(base_folder):
                 self.initiate_opentera_transfer(device_name)
 
-        logging.info("All done!")
+        # logging.info("All done!")
 
     def initiate_opentera_transfer(self, device_name: str):
         # Only one thread can transfer at a time - this prevent file conflicts
@@ -137,6 +162,7 @@ class WatchServerOpenTera(WatchServerBase):
             if response.status_code != 200:
                 logging.error('OpenTera: Unable to login device ' + device_name + ': ' + str(response.status_code) +
                               ' - ' + response.text.strip())
+                self.plan_upload_retry(device_name)
                 return
 
             device_infos = response.json()['device_info']
@@ -161,6 +187,7 @@ class WatchServerOpenTera(WatchServerBase):
                 id_session_type = possible_session_types_ids[0]
 
             # Browse all data folders
+            erronous_paths = []
             for (dir_path, dir_name, files) in os.walk(base_folder):
                 if dir_path == base_folder:
                     continue
@@ -176,6 +203,17 @@ class WatchServerOpenTera(WatchServerBase):
                     session_data = f.read()
 
                 session_data_json = json.loads(session_data)
+
+                # Check if we have all the required files for that session
+                if 'files' in session_data_json:
+                    required_files = session_data_json['files']
+                    current_files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+                    missing_files = set(required_files).difference(current_files)
+                    if missing_files:
+                        # Missing files
+                        logging.error('Missing files in dataset: ' + ', '.join(missing_files) + ' - ignoring dataset '
+                                                                                                'for now')
+                        continue
 
                 # Read watch_logs.txt file
                 log_file = os.path.join(dir_path, 'watch_logs.txt')
@@ -196,6 +234,20 @@ class WatchServerOpenTera(WatchServerBase):
                 first_timestamp = logs_data[0].split('\t')[0]
                 last_timestamp = logs_data[-1].split('\t')[0]
                 duration = float(last_timestamp) - float(first_timestamp)
+
+                # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
+                # if watch battery was depleted or a new day started
+                battery_file = os.path.join(dir_path, 'watch_Battery.data')
+                battery_file = battery_file.replace('/', os.sep)
+                if os.path.isfile(battery_file):
+                    with open(battery_file, mode='rb') as f:
+                        f.seek(-10, os.SEEK_END)
+                        batt_data = f.read(8)  # Read the last timestamp of the file
+                        if len(batt_data) == 8:
+                            batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
+                            if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
+                                duration = float(batt_last_timestamp) - float(first_timestamp)
+
                 if duration <= self.minimal_dataset_duration:
                     logging.info('Rejected folder ' + dir_path + ': dataset too small.')
                     self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
@@ -235,45 +287,85 @@ class WatchServerOpenTera(WatchServerBase):
 
                 id_session = response.json()['id_session']
 
+                # Get list of assets already present for that session
+                response = device_com.do_get(DeviceAPI.ENDPOINT_DEVICE_ASSETS, {'id_session': id_session})
+                if response.status_code != 200:
+                    logging.error('OpenTera: Unable to query assets for session: ' + str(response.status_code) +
+                                  ' - ' + response.text.strip())
+                    continue
+                session_file_names = [asset['asset_name'] for asset in response.json()]
+
                 # Create session events
-                session_events = self.watch_logs_to_events(logs_data)
-                for index, event in enumerate(session_events):
-                    if index >= 100:
-                        logging.warning('OpenTera: More than 100 session events for session ' + session_name +
-                                        ' - ignoring the rest...')
-                        break
-                    event['id_session'] = id_session
-                    event['id_session_event'] = 0
-                    response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSION_EVENTS, {'session_event': event})
-                    if response.status_code != 200:
-                        logging.error('OpenTera: Unable to create session event - skipping: ' + str(response.status_code) +
-                                      ' - ' + response.text.strip())
-                        continue
+                if not session_file_names:  # No files uploaded - create events
+                    session_events = self.watch_logs_to_events(logs_data)
+                    for index, event in enumerate(session_events):
+                        if index >= 100:
+                            logging.warning('OpenTera: More than 100 session events for session ' + session_name +
+                                            ' - ignoring the rest...')
+                            break
+                        event['id_session'] = id_session
+                        event['id_session_event'] = 0
+                        response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSION_EVENTS,
+                                                      {'session_event': event})
+                        if response.status_code != 200:
+                            logging.error(
+                                'OpenTera: Unable to create session event - skipping: ' + str(response.status_code) +
+                                ' - ' + response.text.strip())
+                            continue
 
                 # Upload all files to FileTransfer service
+                upload_errors = False
                 for data_file in files:
                     full_path = str(os.path.join(dir_path, data_file))
+                    if data_file in session_file_names:
+                        logging.warning('File ' + data_file + ' already in session - ignoring.')
+                        continue
                     logging.info('Uploading ' + full_path + '...')
                     response = device_com.upload_file(id_session=id_session, asset_name=data_file, file_path=full_path)
                     if response.status_code != 200:
                         logging.error('OpenTera: Unable to upload file - skipping: ' + str(response.status_code) +
                                       ' - ' + response.text.strip())
+                        upload_errors = True
                         continue
 
                 logging.info('WatchServerOpenTera: Done processing ' + dir_path)
-                self.processed_files.append(dir_path)
-
-                # All done for that folder - move to processed folder after a small delay to allow uploaded files to
-                # properly close
-                # threading.Timer(interval=1, function=self.move_folder,
-                #                 kwargs={'source_folder': dir_path,
-                #                         'target_folder': dir_path.replace('ToProcess', 'Processed')}).start()
+                if not upload_errors:
+                    self.processed_files.append(dir_path)
+                else:
+                    erronous_paths.append(dir_path)
 
             for dir_path in self.processed_files:
                 logging.info('Moving ' + dir_path + '...')
                 self.move_folder(dir_path, dir_path.replace('ToProcess', 'Processed'))
             self.processed_files.clear()
+
             logging.info('WatchServerOpenTera: Data transfer for ' + device_name + ' completed')
+
+            if erronous_paths:
+                self.plan_upload_retry(device_name)
+            else:
+                if device_name in self._device_retries:
+                    del self._device_retries[device_name]
+
+    def plan_upload_retry(self, device_name):
+        if device_name not in self._device_retries.keys():
+            self._device_retries[device_name] = 1
+        else:
+            self._device_retries[device_name] = self._device_retries[device_name] + 1
+            if self._device_retries[device_name] > 5:
+                logging.warning('Too many retries for device ' + device_name + ' - abandonning automatic '
+                                                                               'transfer resuming')
+                del self._device_retries[device_name]
+                return
+        # Plan next retry timer
+        logging.warning('Errors occured in transfer for ' + device_name + ' - will retry later!')
+        retry_timer = threading.Timer(120, self.initiate_opentera_transfer,
+                                      kwargs={'device_name': device_name})
+        retry_timer.start()
+
+    # def file_upload_callback(self, monitor):
+    #     pc = (monitor.bytes_read / monitor.len) * 100
+    #     print(pc)
 
     @staticmethod
     def watch_logs_to_events(logs: list) -> list:
