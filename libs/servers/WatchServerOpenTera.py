@@ -175,15 +175,17 @@ class WatchServerOpenTera(WatchServerBase):
 
             # Find correct session type to use
             possible_session_types_ids = [st['id_session_type'] for st in session_types_infos
-                                          if st['session_type_category'] == SessionCategoryEnum.DATACOLLECT.value]
+                                          if 'session_type_service_key' in st and
+                                          st['session_type_service_key'] == 'FileTransferService']
             if len(possible_session_types_ids) == 0:
-                logging.error('No "Data Collect" session types available to this device - will not transfer until this '
-                              'is fixed.')
+                logging.error('No session types with service "FileTransfer" available to this device - will not '
+                              'transfer until this is fixed.')
                 return
 
             id_session_type = self.opentera_config['default_session_type_id']
             if id_session_type not in possible_session_types_ids:
-                logging.warning('Default session type ID not in available session types - will use the first one.')
+                logging.warning('Default session type ID not in available session types - will use the first one: ' +
+                                str(possible_session_types_ids[0]))
                 id_session_type = possible_session_types_ids[0]
 
             # Browse all data folders
