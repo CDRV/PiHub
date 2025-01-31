@@ -320,6 +320,9 @@ class WatchServerOpenTera(WatchServerBase):
                     if data_file in session_file_names:
                         logging.warning('File ' + data_file + ' already in session - ignoring.')
                         continue
+                    if os.path.getsize(full_path) == 0:
+                        logging.warning('File ' + data_file + ' is empty - ignoring.')
+                        continue
                     logging.info('Uploading ' + full_path + '...')
                     response = device_com.upload_file(id_session=id_session, asset_name=data_file, file_path=full_path)
                     if response.status_code != 200:
