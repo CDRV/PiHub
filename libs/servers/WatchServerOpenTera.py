@@ -243,7 +243,12 @@ class WatchServerOpenTera(WatchServerBase):
                 # Compute duration
                 first_timestamp = logs_data[0].split('\t')[0]
                 last_timestamp = logs_data[-1].split('\t')[0]
-                duration = float(last_timestamp) - float(first_timestamp)
+                try:
+                    duration = float(last_timestamp) - float(first_timestamp)
+                except ValueError:
+                    logging.info('Badly formatted log file - ignoring...')
+                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                    continue
 
                 # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
                 # if watch battery was depleted or a new day started
