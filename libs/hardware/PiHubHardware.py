@@ -14,8 +14,9 @@ class PiHubHardware:
 
     @staticmethod
     def reset_cellular_network():
-        cmd = 'sh /home/pi/Desktop/PiHub/setup/pihub_startup.sh'
-        os.system(cmd)
+        logging.warning('Reset Cellular Network requested, but unavailable for that device.')
+        # cmd = 'sh /home/pi/Desktop/PiHub/setup/pihub_startup.sh'
+        # os.system(cmd)
 
     @staticmethod
     def reboot():
@@ -32,7 +33,7 @@ class PiHubHardware:
         if not Network.is_internet_connected():
             logging.warning('Internet is down... Trying to reboot cellular card.')
             # No internet connection... Try to reboot the cellular network
-            PiHubHardware.reset_cellular_network()
+            # PiHubHardware.reset_cellular_network()
             time.sleep(5)  # Wait 5 seconds to see if network is coming back online or not
             if not Network.is_internet_connected():
                 logging.warning('Reboot completed, but still no Internet...')
@@ -63,6 +64,6 @@ class PiHubHardware:
         while not Network.is_internet_connected():
             logging.warning('Internet is down... Trying to reboot cellular card.')
             # No internet connection... Try to reboot the cellular network
-            PiHubHardware.reset_cellular_network()
+            # PiHubHardware.reset_cellular_network()
             time.sleep(60)  # Wait 60 seconds to see if network is coming back online or not
         logging.info('Internet is back. All is fine.')
