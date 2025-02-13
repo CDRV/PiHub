@@ -4,6 +4,8 @@ from libs.servers.handlers.OpenTeraAppleWatchRequestHandler import OpenTeraApple
 from opentera_libraries.device.DeviceComManager import DeviceComManager
 from opentera_libraries.common.Constants import SessionStatus, SessionEventTypes, SessionCategoryEnum
 
+from Globals import version_string
+
 import opentera_libraries.device.DeviceAPI as DeviceAPI
 from cryptography.fernet import Fernet
 from threading import Lock
@@ -135,7 +137,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def initiate_opentera_transfer(self, device_name: str):
         # Only one thread can transfer at a time - this prevent file conflicts
-        with (opentera_lock):
+        with ((opentera_lock)):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
 
             if device_name in self._device_timeouts:
@@ -158,7 +160,13 @@ class WatchServerOpenTera(WatchServerBase):
             device_com.token = self._device_tokens[device_name]
 
             # Do device login
-            response = device_com.do_get(DeviceAPI.ENDPOINT_DEVICE_LOGIN)
+            try:
+                response = device_com.do_get(DeviceAPI.ENDPOINT_DEVICE_LOGIN)
+            except Exception as e:
+                logging.error('OpenTera: Unable to login device ' + device_name + ': ' + str(e))
+                self.plan_upload_retry(device_name)
+                return
+
             if response.status_code != 200:
                 logging.error('OpenTera: Unable to login device ' + device_name + ': ' + str(response.status_code) +
                               ' - ' + response.text.strip())
@@ -273,7 +281,8 @@ class WatchServerOpenTera(WatchServerBase):
                 session_params = session_params.replace('\n', '').replace('\t', '').replace(',,', ',').replace('{,', '{'). \
                     replace(' ', '').replace(',}', '}')
 
-                session_comments = 'Created by ' + device_name + ', SensorLogger v' + session_data_json['appVersion']
+                session_comments = 'Created by ' + device_name + ' [SensorLogger v' + session_data_json['appVersion'] + ']'
+                session_comments += ', Uploaded by PiHub v' + version_string
 
                 # Create session
                 if 'timestamp' in session_data_json:
