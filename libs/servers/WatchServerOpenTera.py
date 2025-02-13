@@ -4,6 +4,8 @@ from libs.servers.handlers.OpenTeraAppleWatchRequestHandler import OpenTeraApple
 from opentera_libraries.device.DeviceComManager import DeviceComManager
 from opentera_libraries.common.Constants import SessionStatus, SessionEventTypes, SessionCategoryEnum
 
+from Globals import version_string
+
 import opentera_libraries.device.DeviceAPI as DeviceAPI
 from cryptography.fernet import Fernet
 from threading import Lock
@@ -135,7 +137,7 @@ class WatchServerOpenTera(WatchServerBase):
 
     def initiate_opentera_transfer(self, device_name: str):
         # Only one thread can transfer at a time - this prevent file conflicts
-        with (opentera_lock):
+        with ((opentera_lock)):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
 
             if device_name in self._device_timeouts:
@@ -158,7 +160,13 @@ class WatchServerOpenTera(WatchServerBase):
             device_com.token = self._device_tokens[device_name]
 
             # Do device login
-            response = device_com.do_get(DeviceAPI.ENDPOINT_DEVICE_LOGIN)
+            try:
+                response = device_com.do_get(DeviceAPI.ENDPOINT_DEVICE_LOGIN)
+            except Exception as e:
+                logging.error('OpenTera: Unable to login device ' + device_name + ': ' + str(e))
+                self.plan_upload_retry(device_name)
+                return
+
             if response.status_code != 200:
                 logging.error('OpenTera: Unable to login device ' + device_name + ': ' + str(response.status_code) +
                               ' - ' + response.text.strip())
@@ -174,16 +182,26 @@ class WatchServerOpenTera(WatchServerBase):
                 return
 
             # Find correct session type to use
+            # possible_session_types_ids = [st['id_session_type'] for st in session_types_infos
+            #                               if 'session_type_service_key' in st and
+            #                               st['session_type_service_key'] == 'FileTransferService']
+            # if len(possible_session_types_ids) == 0:
+            #     logging.error('No session types with service "FileTransfer" available to this device - will not '
+            #                   'transfer until this is fixed.')
+            #     return
+            # Find correct session type to use
             possible_session_types_ids = [st['id_session_type'] for st in session_types_infos
                                           if st['session_type_category'] == SessionCategoryEnum.DATACOLLECT.value]
             if len(possible_session_types_ids) == 0:
-                logging.error('No "Data Collect" session types available to this device - will not transfer until this '
-                              'is fixed.')
+                logging.error(
+                    'No "Data Collect" session types available to this device - will not transfer until this '
+                    'is fixed.')
                 return
 
             id_session_type = self.opentera_config['default_session_type_id']
             if id_session_type not in possible_session_types_ids:
-                logging.warning('Default session type ID not in available session types - will use the first one.')
+                logging.warning('Default session type ID not in available session types - will use the first one: ' +
+                                str(possible_session_types_ids[0]))
                 id_session_type = possible_session_types_ids[0]
 
             # Browse all data folders
@@ -233,7 +251,12 @@ class WatchServerOpenTera(WatchServerBase):
                 # Compute duration
                 first_timestamp = logs_data[0].split('\t')[0]
                 last_timestamp = logs_data[-1].split('\t')[0]
-                duration = float(last_timestamp) - float(first_timestamp)
+                try:
+                    duration = float(last_timestamp) - float(first_timestamp)
+                except ValueError:
+                    logging.info('Badly formatted log file - ignoring...')
+                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                    continue
 
                 # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
                 # if watch battery was depleted or a new day started
@@ -258,7 +281,8 @@ class WatchServerOpenTera(WatchServerBase):
                 session_params = session_params.replace('\n', '').replace('\t', '').replace(',,', ',').replace('{,', '{'). \
                     replace(' ', '').replace(',}', '}')
 
-                session_comments = 'Created by ' + device_name + ', SensorLogger v' + session_data_json['appVersion']
+                session_comments = 'Created by ' + device_name + ' [SensorLogger v' + session_data_json['appVersion'] + ']'
+                session_comments += ', Uploaded by PiHub v' + version_string
 
                 # Create session
                 if 'timestamp' in session_data_json:
@@ -319,6 +343,9 @@ class WatchServerOpenTera(WatchServerBase):
                     full_path = str(os.path.join(dir_path, data_file))
                     if data_file in session_file_names:
                         logging.warning('File ' + data_file + ' already in session - ignoring.')
+                        continue
+                    if os.path.getsize(full_path) == 0:
+                        logging.warning('File ' + data_file + ' is empty - ignoring.')
                         continue
                     logging.info('Uploading ' + full_path + '...')
                     response = device_com.upload_file(id_session=id_session, asset_name=data_file, file_path=full_path)

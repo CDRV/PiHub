@@ -19,8 +19,9 @@ class PiHubHardware:
 
     @staticmethod
     def reboot():
-        cmd_reboot = 'sudo reboot'
-        os.system(cmd_reboot)
+        # cmd_reboot = 'sudo reboot'
+        # os.system(cmd_reboot)
+        logging.warning('Reboot requested, but disabled for now...')
 
     @staticmethod
     def ensure_internet_is_available():
@@ -34,9 +35,10 @@ class PiHubHardware:
             PiHubHardware.reset_cellular_network()
             time.sleep(5)  # Wait 5 seconds to see if network is coming back online or not
             if not Network.is_internet_connected():
-                logging.warning('Reboot completed, but still no Internet... Rebooting...')
+                logging.warning('Reboot completed, but still no Internet...')
                 # Still no internet connection - reboot the pi!
-                PiHubHardware.reboot()
+                # SB - 2025-02-05: Removed reboot to avoid infinite reboot loop
+                # PiHubHardware.reboot()
             else:
                 logging.info('Internet is back. All is fine.')
 
