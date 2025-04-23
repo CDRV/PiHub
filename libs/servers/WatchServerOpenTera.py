@@ -229,9 +229,19 @@ class WatchServerOpenTera(WatchServerBase):
                     missing_files = set(required_files).difference(current_files)
                     if missing_files:
                         # Missing files
-                        logging.error('Missing files in dataset: ' + ', '.join(missing_files) + ' - ignoring dataset '
-                                                                                                'for now')
-                        continue
+                        # Ignore beacon missing file
+                        if 'watch_Beacons.data' in missing_files:
+                            missing_files.remove('watch_Beacons.data')
+                            logging.warning("Missing 'watch_Beacons.data', but expected.")
+
+                        # Ignore coordinates missing file
+                        if 'watch_Coordinates.data' in missing_files:
+                            missing_files.remove('watch_Coordinates.data')
+                            logging.warning("Missing 'watch_Coordinates.data', but expected.")
+
+                        if missing_files:
+                            logging.error('Missing files in dataset: ' + ', '.join(missing_files) + ' - ignoring dataset for now')
+                            continue
 
                 # Read watch_logs.txt file
                 log_file = os.path.join(dir_path, 'watch_logs.txt')
