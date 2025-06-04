@@ -264,7 +264,7 @@ class WatchServerOpenTera(WatchServerBase):
                 try:
                     duration = float(last_timestamp) - float(first_timestamp)
                 except ValueError:
-                    logging.info('Badly formatted log file - ignoring...')
+                    logging.info('Badly formatted log file - ignoring dataset...')
                     self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
                     continue
 
@@ -274,7 +274,13 @@ class WatchServerOpenTera(WatchServerBase):
                 battery_file = battery_file.replace('/', os.sep)
                 if os.path.isfile(battery_file):
                     with open(battery_file, mode='rb') as f:
-                        f.seek(-10, os.SEEK_END)
+                        try:
+                            f.seek(-10, os.SEEK_END)
+                        except OSError as e:
+                            logging.info('Badly formatted battery file - ignoring dataset...')
+                            f.close()
+                            self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                            continue
                         batt_data = f.read(8)  # Read the last timestamp of the file
                         if len(batt_data) == 8:
                             batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
