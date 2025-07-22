@@ -36,13 +36,7 @@ if __name__ == '__main__':
 
     # Load config file
     logging.info("Starting up PiHub v" + version_string + "...")
-    config_file = 'config/PiHub_Defaults.json'
-    if os.path.isfile('config/PiHub.json'):
-        config_file = 'config/PiHub.json'
-    else:
-        logging.warning('No specific config file - using default config!')
-    logging.info('Using config file: ' + config_file)
-    if not config_man.load_config(config_file):
+    if not config_man.load_config('config/PiHub.json', 'config/PiHub_Defaults.json'):
         logging.critical("Invalid config - system halted.")
         exit(1)
 
@@ -72,10 +66,10 @@ if __name__ == '__main__':
     if config_man.general_config["enable_watch_server"]:
         # Start Apple Watch server
         watch_server = None
-        if config_man.watch_server_config['transfer_type'] == 'sftp':
+        if config_man.watch_server_config['transfer_type'].lower() == 'sftp':
             watch_server = WatchServerSFTP(server_config=config_man.watch_server_config,
                                            sftp_config=config_man.sftp_config)
-        if config_man.watch_server_config['transfer_type'] == 'opentera':
+        if config_man.watch_server_config['transfer_type'].lower() == 'opentera':
             watch_server = WatchServerOpenTera(server_config=config_man.watch_server_config,
                                                opentera_config=config_man.opentera_config)
         if not watch_server:

@@ -1,4 +1,5 @@
 fabric ~= 3.2.2
 paramiko ~= 3.5.1
 opentera-libraries @ git+https://github.com/introlab/opentera-libraries@dev
-cryptography ~= 45.0.3
+cryptography==45.0.5
+jsonmerge==1.9.2
