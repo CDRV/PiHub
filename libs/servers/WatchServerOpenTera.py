@@ -232,6 +232,7 @@ class WatchServerOpenTera(WatchServerBase):
 
             # Browse all data folders
             erronous_paths = []
+            id_session = -1
             for (dir_path, dir_name, files) in os.walk(base_folder):
                 if dir_path == base_folder:
                     continue
