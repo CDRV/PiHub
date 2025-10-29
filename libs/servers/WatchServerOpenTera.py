@@ -418,14 +418,15 @@ class WatchServerOpenTera(WatchServerBase):
             if erronous_paths:
                 self.plan_upload_retry(device_name)
             else:
-                # Change session status to "completed"
-                session_info = {'id_session': id_session,
-                                'session_status': SessionStatus.STATUS_COMPLETED.value
-                                }
-                response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSIONS, {'session': session_info})
-                if response.status_code != 200:
-                    logging.error('OpenTera: Unable to update session status: ' + str(response.status_code) +
-                                  ' - ' + response.text.strip())
+                if id_session > 0:
+                    # Change session status to "completed"
+                    session_info = {'id_session': id_session,
+                                    'session_status': SessionStatus.STATUS_COMPLETED.value
+                                    }
+                    response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSIONS, {'session': session_info})
+                    if response.status_code != 200:
+                        logging.error('OpenTera: Unable to update session status: ' + str(response.status_code) +
+                                      ' - ' + response.text.strip())
                 if device_name in self._device_retries:
                     del self._device_retries[device_name]
 
