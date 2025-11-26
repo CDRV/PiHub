@@ -228,7 +228,11 @@ class WatchServerOpenTera(WatchServerBase):
                                 str(possible_session_types_ids[0]))
                 current_session_type = possible_session_types[0]
             else:
-                current_session_type = possible_session_types[possible_session_types_ids.index(default_id_session_type)]
+                for session_type in possible_session_types:
+                    if session_type['id_session_type'] == default_id_session_type:
+                        current_session_type = session_type
+                        break
+                # current_session_type = possible_session_types[possible_session_types_ids.index(default_id_session_type)]
 
             # Browse all data folders
             erronous_paths = []
