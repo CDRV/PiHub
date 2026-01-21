@@ -235,7 +235,7 @@ class WatchServerOpenTera(WatchServerBase):
                 # current_session_type = possible_session_types[possible_session_types_ids.index(default_id_session_type)]
 
             # Browse all data folders
-            erronous_paths = []
+            erroneous_paths = []
             for (dir_path, dir_name, files) in os.walk(base_folder):
                 if dir_path == base_folder:
                     continue
@@ -388,12 +388,22 @@ class WatchServerOpenTera(WatchServerBase):
 
                 # Upload all files to OpenTera specified service
                 upload_errors = False
+                # Order files with their size (smaller first)
+                files_infos = []
                 for data_file in files:
                     full_path = str(os.path.join(dir_path, data_file))
+                    file_size = os.path.getsize(full_path)
+                    files_infos.append({'file': data_file, 'path': full_path, 'size': file_size})
+
+                files_infos = sorted(files_infos, key=lambda d: d['size'])
+
+                for file_info in files_infos:
+                    full_path = file_info['path']
+                    data_file = file_info['file']
                     if data_file in session_file_names:
                         logging.warning('File ' + data_file + ' already in session - ignoring.')
                         continue  # ... with next file!
-                    if os.path.getsize(full_path) == 0:
+                    if file_info['size'] == 0:
                         logging.warning('File ' + data_file + ' is empty - ignoring.')
                         continue  # ... with next file!
                     logging.info('Uploading ' + full_path + '...')
@@ -403,22 +413,25 @@ class WatchServerOpenTera(WatchServerBase):
                         logging.error('OpenTera: Unable to upload file - skipping: ' + str(response.status_code) +
                                       ' - ' + response.text.strip())
                         upload_errors = True
-                        continue  # ... with next file!
+                        # This was added to prevent reuploading large files over and over and over in case of auth failure
+                        # if response.status_code == 403 or response.status_code == 400:
+                        logging.error('Aborting data transfer for now...')
+                        break # Abort rest of transfers
+                        # continue  # ... with next file!
 
                 logging.info('WatchServerOpenTera: Done processing ' + dir_path)
                 if not upload_errors:
                     self.processed_files.append(dir_path)
+                    # Change session status to "completed"
+                    session_info = {'id_session': id_session,
+                                    'session_status': SessionStatus.STATUS_COMPLETED.value
+                                    }
+                    response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSIONS, {'session': session_info})
+                    if response.status_code != 200:
+                        logging.error('OpenTera: Unable to update session status: ' + str(response.status_code) +
+                                      ' - ' + response.text.strip())
                 else:
-                    erronous_paths.append(dir_path)
-
-                # Change session status to "completed"
-                session_info = {'id_session': id_session,
-                                'session_status': SessionStatus.STATUS_COMPLETED.value
-                                }
-                response = device_com.do_post(DeviceAPI.ENDPOINT_DEVICE_SESSIONS, {'session': session_info})
-                if response.status_code != 200:
-                    logging.error('OpenTera: Unable to update session status: ' + str(response.status_code) +
-                                  ' - ' + response.text.strip())
+                    erroneous_paths.append(dir_path)
 
             for dir_path in self.processed_files:
                 logging.info('Moving ' + dir_path + '...')
@@ -427,7 +440,7 @@ class WatchServerOpenTera(WatchServerBase):
 
             logging.info('WatchServerOpenTera: Data transfer for ' + device_name + ' completed')
 
-            if erronous_paths:
+            if erroneous_paths:
                 self.plan_upload_retry(device_name)
             else:
                 if device_name in self._device_retries:
@@ -444,7 +457,7 @@ class WatchServerOpenTera(WatchServerBase):
                 return
         # Plan next retry timer
         logging.warning('Errors occurred in data transfer for ' + device_name + ' - will retry later!')
-        retry_timer = threading.Timer(120, self.initiate_opentera_transfer,
+        retry_timer = threading.Timer(1800, self.initiate_opentera_transfer,
                                       kwargs={'device_name': device_name})
         retry_timer.start()
 
