@@ -60,12 +60,12 @@ The PiHub network watcher is an independent service that monitors the state of t
 1. Install the `uhubctl` package: `sudo apt install uhubctl`
 2. Setup and enable the main PiHub Net Manager service using<br>
 
-        `sudo cp /home/pi/Desktop/PiHub/setup/pihubnet.service /etc/systemd/system/pihubnet.service`<br>
-        `sudo systemctl enable pihubnet.service`
-        `sudo systemctl start pihubnet.service`
+        sudo cp /home/pi/Desktop/PiHub/setup/pihubnet.service /etc/systemd/system/pihubnet.service
+        sudo systemctl enable pihubnet.service
+        sudo systemctl start pihubnet.service
 
 ## Local development environment setup
-If not developping directly on a Raspberry Pi, a virtual Python environment (venv) is suggested. 
+If not developing directly on a Raspberry Pi, a virtual Python environment (venv) is suggested. 
 
 1. Install Python (see requirement version above)
 2. Create a virtual environment:

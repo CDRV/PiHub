@@ -1,8 +1,8 @@
 import time
 import logging
 import sys
-import os
 
+import socket
 from libs.config.ConfigManager import ConfigManager
 from libs.servers.BedServer import BedServer
 from libs.servers.WatchServerSFTP import WatchServerSFTP
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     config_man = ConfigManager()
 
     # Load config file
-    logging.info("Starting up PiHub v" + version_string + "...")
+    logging.info(socket.getfqdn() + " - Starting up PiHub v" + version_string + "...")
     if not config_man.load_config('config/PiHub.json', 'config/PiHub_Defaults.json'):
         logging.critical("Invalid config - system halted.")
         exit(1)

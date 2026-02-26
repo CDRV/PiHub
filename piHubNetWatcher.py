@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     from libs.logging.Logger import init_file_logger
 
-    init_file_logger("./logs/watcher")
+    init_file_logger("./logs/netwatcher")
     logging.getLogger().setLevel(logging.DEBUG)
 
     logging.info("Starting up PiHubNetWatcher")

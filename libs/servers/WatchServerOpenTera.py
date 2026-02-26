@@ -16,6 +16,7 @@ import threading
 import json
 import datetime
 import struct
+import socket
 
 opentera_lock = Lock()
 
@@ -139,6 +140,8 @@ class WatchServerOpenTera(WatchServerBase):
         # Only one thread can transfer at a time - this prevent file conflicts
         with (opentera_lock):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
+
+            hub_name = socket.getfqdn()
 
             if device_name in self._device_timeouts:
                 # Stop timer if needed
@@ -328,7 +331,7 @@ class WatchServerOpenTera(WatchServerBase):
                     replace(' ', '').replace(',}', '}')
 
                 session_comments = 'Created by ' + device_name + ' [SensorLogger v' + session_data_json['appVersion'] + ']'
-                session_comments += ', Uploaded by PiHub v' + version_string
+                session_comments += ', Uploaded by PiHub ' + hub_name + ' v' + version_string
 
                 # Create session
                 if 'timestamp' in session_data_json:
