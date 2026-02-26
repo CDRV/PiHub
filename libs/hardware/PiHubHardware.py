@@ -7,6 +7,7 @@ import os
 import time
 import logging
 import threading
+import subprocess
 from libs.utils.Network import Network
 
 
@@ -67,3 +68,16 @@ class PiHubHardware:
             # PiHubHardware.reset_cellular_network()
             time.sleep(60)  # Wait 60 seconds to see if network is coming back online or not
         logging.info('Internet is back. All is fine.')
+
+    @staticmethod
+    def has_usb_device(name: str) -> bool:
+        # logging.debug('Checking for device ' + name)
+        cmd = 'lsusb | grep ' + name
+        output = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        return not (not output.stdout)
+
+    @staticmethod
+    def reboot_usb_hub():
+        cmd = "sudo uhubctl -a2 -l1-1"
+        output = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        # logging.debug(output.stdout)
