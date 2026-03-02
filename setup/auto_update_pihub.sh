@@ -1,5 +1,6 @@
 echo "Pull from git"
 cd /home/pi/Desktop/PiHub
+git checkout create_conda_venv.sh;
 if git pull | grep -q 'Already up to date.';
 then
    echo "Up to date - do nothing";
