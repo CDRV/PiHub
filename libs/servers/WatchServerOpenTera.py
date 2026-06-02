@@ -8,6 +8,7 @@ from Globals import version_string
 
 import opentera_libraries.device.DeviceAPI as DeviceAPI
 from cryptography.fernet import Fernet
+from requests import JSONDecodeError
 from threading import Lock
 
 import logging
@@ -16,6 +17,7 @@ import threading
 import json
 import datetime
 import struct
+import socket
 
 opentera_lock = Lock()
 
@@ -140,6 +142,8 @@ class WatchServerOpenTera(WatchServerBase):
         with (opentera_lock):
             logging.info("WatchServerOpenTera: Initiating data transfer for " + device_name + "...")
 
+            hub_name = socket.getfqdn()
+
             if device_name in self._device_timeouts:
                 # Stop timer if needed
                 self._device_timeouts[device_name].cancel()
@@ -244,13 +248,18 @@ class WatchServerOpenTera(WatchServerBase):
                 session_file = os.path.join(dir_path, 'session.oimi')
                 session_file = session_file.replace('/', os.sep)
                 if not os.path.isfile(session_file):
-                    logging.error('No session file in ' + dir_path)
+                    logging.error('No session file in ' + dir_path + ' - will try later.')
                     continue  # ... with next dataset!
 
                 with open(session_file) as f:
                     session_data = f.read()
 
-                session_data_json = json.loads(session_data)
+                try:
+                    session_data_json = json.loads(session_data)
+                except JSONDecodeError:
+                    logging.error('Unable to load session infos file in ' + dir_path + ' - ignoring dataset.')
+                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                    continue # ... with next dataset
 
                 # Check if we have all the required files for that session
                 if 'files' in session_data_json:
@@ -277,7 +286,7 @@ class WatchServerOpenTera(WatchServerBase):
                 log_file = os.path.join(dir_path, 'watch_logs.txt')
                 log_file = log_file.replace('/', os.sep)
                 if not os.path.isfile(log_file):
-                    logging.error('No watch logs file in ' + dir_path)
+                    logging.error('No watch logs file in ' + dir_path + ' - will try again later.')
                     continue  # ... with next dataset!
 
                 with open(log_file) as f:
@@ -328,7 +337,7 @@ class WatchServerOpenTera(WatchServerBase):
                     replace(' ', '').replace(',}', '}')
 
                 session_comments = 'Created by ' + device_name + ' [SensorLogger v' + session_data_json['appVersion'] + ']'
-                session_comments += ', Uploaded by PiHub v' + version_string
+                session_comments += ', Uploaded by PiHub ' + hub_name + ' v' + version_string
 
                 # Create session
                 if 'timestamp' in session_data_json:
