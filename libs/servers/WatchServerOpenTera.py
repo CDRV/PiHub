@@ -254,6 +254,11 @@ class WatchServerOpenTera(WatchServerBase):
                 with open(session_file) as f:
                     session_data = f.read()
 
+                if not session_data:
+                    logging.error('Empty session infos file in ' + dir_path + ' - ignoring dataset.')
+                    self.move_folder(dir_path, dir_path.replace('ToProcess', 'Rejected'))
+                    continue  # ... with next dataset
+
                 try:
                     session_data_json = json.loads(session_data)
                 except JSONDecodeError:
