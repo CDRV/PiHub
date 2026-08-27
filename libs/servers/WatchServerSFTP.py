@@ -50,6 +50,7 @@ class WatchServerSFTP(WatchServerBase):
         for (dp, dn, f) in os.walk(base_folder):
             if f:
                 dp = dp.replace('/', os.sep)
+                logging.info('Processing:' + str(dp))
                 if self.send_logs_only:
                     # Filter list of files to keep only log files
                     folder_files = [file for file in f if file.lower().endswith("txt") or file.lower().endswith("oimi")]
