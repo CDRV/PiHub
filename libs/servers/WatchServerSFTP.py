@@ -63,6 +63,7 @@ class WatchServerSFTP(WatchServerBase):
                                 with open(os.path.join(dp, 'watch_logs.txt'), newline='') as csvfile:
                                     log_reader = csv.reader(csvfile, delimiter='\t')
                                     first_timestamp = None
+                                    duration = 0
                                     for row in log_reader:
                                         if len(row) == 0:
                                             continue
