@@ -50,6 +50,7 @@ class WatchServerSFTP(WatchServerBase):
         for (dp, dn, f) in os.walk(base_folder):
             if f:
                 dp = dp.replace('/', os.sep)
+                logging.info('Processing:' + str(dp))
                 if self.send_logs_only:
                     # Filter list of files to keep only log files
                     folder_files = [file for file in f if file.lower().endswith("txt") or file.lower().endswith("oimi")]
@@ -68,7 +69,12 @@ class WatchServerSFTP(WatchServerBase):
                                         if not first_timestamp:
                                             first_timestamp = row[0]
                                         last_timestamp = row[0]
-                                duration = float(last_timestamp) - float(first_timestamp)
+                                        try:
+                                            duration = float(last_timestamp) - float(first_timestamp)
+                                        except ValueError:
+                                            logging.info('Badly formatted log file - ignoring dataset...')
+                                            self.move_folder(dp, dp.replace('ToProcess', 'Rejected'))
+                                            continue  # ... with next dataset!
                                 if duration <= self.minimal_dataset_duration:
                                     # Must reject! Too short!
                                     self.move_files([os.path.join(dp, file) for file in f], 'Rejected')
