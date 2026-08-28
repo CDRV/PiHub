@@ -7,6 +7,7 @@ from pathlib import Path
 import logging
 import os
 import threading
+import struct
 
 
 class WatchServerSFTP(WatchServerBase):
@@ -50,7 +51,7 @@ class WatchServerSFTP(WatchServerBase):
         for (dp, dn, f) in os.walk(base_folder):
             if f:
                 dp = dp.replace('/', os.sep)
-                logging.info('Processing:' + str(dp))
+                logging.info('Processing: ' + str(dp))
                 if self.send_logs_only:
                     # Filter list of files to keep only log files
                     folder_files = [file for file in f if file.lower().endswith("txt") or file.lower().endswith("oimi")]
@@ -60,22 +61,40 @@ class WatchServerSFTP(WatchServerBase):
                         if 'watch_logs.txt' in f:
                             import csv
                             try:
+                                duration = 0
                                 with open(os.path.join(dp, 'watch_logs.txt'), newline='') as csvfile:
                                     log_reader = csv.reader(csvfile, delimiter='\t')
                                     first_timestamp = None
-                                    duration = 0
                                     for row in log_reader:
                                         if len(row) == 0:
                                             continue
                                         if not first_timestamp:
                                             first_timestamp = row[0]
                                         last_timestamp = row[0]
+                                try:
+                                    duration = float(last_timestamp) - float(first_timestamp)
+                                except ValueError:
+                                    logging.info('Badly formatted log file - ignoring dataset...')
+                                    self.move_folder(dp, dp.replace('ToProcess', 'Rejected'))
+                                    continue  # ... with next dataset!
+                                # Update duration from "battery" file, if present, since "watch_logs" duration can be under-evaluated
+                                # if watch battery was depleted or a new day started
+                                battery_file = os.path.join(dp, 'watch_Battery.data')
+                                battery_file = battery_file.replace('/', os.sep)
+                                if os.path.isfile(battery_file):
+                                    with open(battery_file, mode='rb') as f:
                                         try:
-                                            duration = float(last_timestamp) - float(first_timestamp)
-                                        except ValueError:
-                                            logging.info('Badly formatted log file - ignoring dataset...')
+                                            f.seek(-10, os.SEEK_END)
+                                        except OSError as e:
+                                            logging.info('Badly formatted battery file - ignoring dataset...')
+                                            f.close()
                                             self.move_folder(dp, dp.replace('ToProcess', 'Rejected'))
-                                            continue  # ... with next dataset!
+                                            continue
+                                        batt_data = f.read(8)  # Read the last timestamp of the file
+                                        if len(batt_data) == 8:
+                                            batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
+                                            if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
+                                                duration = float(batt_last_timestamp) - float(first_timestamp)
                                 if duration <= self.minimal_dataset_duration:
                                     # Must reject! Too short!
                                     self.move_files([os.path.join(dp, file) for file in f], 'Rejected')
