@@ -82,15 +82,15 @@ class WatchServerSFTP(WatchServerBase):
                                 battery_file = os.path.join(dp, 'watch_Battery.data')
                                 battery_file = battery_file.replace('/', os.sep)
                                 if os.path.isfile(battery_file):
-                                    with open(battery_file, mode='rb') as f:
+                                    with open(battery_file, mode='rb') as batt_f:
                                         try:
-                                            f.seek(-10, os.SEEK_END)
+                                            batt_f.seek(-10, os.SEEK_END)
                                         except OSError as e:
                                             logging.info('Badly formatted battery file - ignoring dataset...')
-                                            f.close()
+                                            batt_f.close()
                                             self.move_folder(dp, dp.replace('ToProcess', 'Rejected'))
                                             continue
-                                        batt_data = f.read(8)  # Read the last timestamp of the file
+                                        batt_data = batt_f.read(8)  # Read the last timestamp of the file
                                         if len(batt_data) == 8:
                                             batt_last_timestamp = struct.unpack("<Q", batt_data)[0] / 1000
                                             if batt_last_timestamp and batt_last_timestamp > float(last_timestamp):
