@@ -72,6 +72,8 @@ class WatchServerSFTP(WatchServerBase):
                                             first_timestamp = row[0]
                                         last_timestamp = row[0]
                                 try:
+                                    if not last_timestamp or not first_timestamp:
+                                        raise ValueError
                                     duration = float(last_timestamp) - float(first_timestamp)
                                 except ValueError:
                                     logging.info('Badly formatted log file - ignoring dataset...')
